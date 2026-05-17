@@ -839,9 +839,11 @@ export default function Home() {
                         <option value={0}>No Limit</option>
                         <option value={30}>30 Minutes</option>
                         <option value={45}>45 Minutes</option>
-                        <option value={60}>1 Hour</option>
-                        <option value={75}>75 Minutes</option>
+                        <option value={60}>60 Minutes</option>
+                        <option value={75}>75 Minutes (P2/P4/P5)</option>
                         <option value={90}>90 Minutes</option>
+                        <option value={105}>105 Minutes (P1 Full Paper)</option>
+                        <option value={110}>110 Minutes (P3 Full Paper)</option>
                       </select>
                     </div>
                     <div className="setup-field">
