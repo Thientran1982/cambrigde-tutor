@@ -61,6 +61,20 @@ function extractMeta(filename: string) {
   return { year: 2000 + parseInt(m[3]), session: sess[m[2].toLowerCase()] || '', paper: m[4] };
 }
 
+async function ensureIndex(indexName: string) {
+  const existing = await pinecone.listIndexes();
+  const names = (existing.indexes || []).map((i: { name: string }) => i.name);
+  if (!names.includes(indexName)) {
+    await pinecone.createIndex({
+      name: indexName,
+      dimension: 1536,
+      metric: 'cosine',
+      spec: { serverless: { cloud: 'aws', region: 'us-east-1' } },
+    });
+    await new Promise(r => setTimeout(r, 8000));
+  }
+}
+
 export async function POST(req: NextRequest) {
   const secret = req.headers.get('x-admin-secret');
   if (secret !== process.env.ADMIN_SECRET) {
@@ -75,7 +89,9 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: 'No files provided' }, { status: 400 });
     }
 
-    const index = pinecone.index(process.env.PINECONE_INDEX_NAME || 'cambridge-9709');
+    const indexName = process.env.PINECONE_INDEX_NAME || 'cambridge-9709';
+    await ensureIndex(indexName);
+    const index = pinecone.index(indexName);
     const results = [];
 
     for (const file of files) {
