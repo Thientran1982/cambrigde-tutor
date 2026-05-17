@@ -69,6 +69,8 @@ export default function Home() {
   const [qCount, setQCount] = useState(0);
   const [lastSources, setLastSources] = useState<string[]>([]);
   const [pendingImage, setPendingImage] = useState<{ data: string; type: string; src: string } | null>(null);
+  const [pendingFile, setPendingFile] = useState<{ name: string; content: string; fileType: 'pdf' | 'text' } | null>(null);
+  const [fileLoading, setFileLoading] = useState(false);
 
   const [examView, setExamView] = useState<'setup' | 'active' | 'results'>('setup');
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
@@ -92,6 +94,7 @@ export default function Home() {
   const chatAreaRef = useRef<HTMLDivElement>(null);
   const examTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachFileRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const streamingTextRef = useRef('');
   const streamingSourcesRef = useRef<string[]>([]);
@@ -165,21 +168,32 @@ export default function Home() {
   const sendMessage = useCallback(async () => {
     if (isStreaming) return;
     const text = inputValue.trim();
-    if (!text && !pendingImage) return;
+    if (!text && !pendingImage && !pendingFile) return;
 
     const imgData = pendingImage;
+    const fileData = pendingFile;
     setInputValue('');
     setPendingImage(null);
+    setPendingFile(null);
     setIsStreaming(true);
     setLastSources([]);
     setQCount(c => c + 1);
+
+    // Prepend file content to message text when a file is attached
+    let finalText = text;
+    if (fileData) {
+      const ext = fileData.name.split('.').pop()?.toLowerCase() || '';
+      const preview = fileData.content.slice(0, 10000);
+      const truncated = fileData.content.length > 10000 ? `\n\n[…${fileData.content.length - 10000} more characters truncated]` : '';
+      finalText = `[Attached file: ${fileData.name}]\n\n\`\`\`${ext}\n${preview}${truncated}\n\`\`\`${text ? '\n\n' + text : '\n\nPlease analyze this file and help me understand the content in the context of Cambridge 9709 mathematics.'}`;
+    }
 
     const userContent: string | ContentBlock[] = imgData
       ? [
           { type: 'image', source: { type: 'base64', media_type: imgData.type, data: imgData.data } },
           { type: 'text', text: (text || 'Analyze this Cambridge exam paper and solve each question with full working and Cambridge mark scheme.') + (currentTopic !== 'All Topics' ? ` [Focus: ${currentTopic}]` : '') },
         ]
-      : (currentTopic !== 'All Topics' ? `[Focus: ${currentTopic}]\n\n` : '') + text;
+      : (currentTopic !== 'All Topics' ? `[Focus: ${currentTopic}]\n\n` : '') + finalText;
 
     const userMsg: ChatMessage = { role: 'user', content: userContent, imgSrc: imgData?.src };
     const newMessages = [...messages, userMsg];
@@ -259,6 +273,50 @@ export default function Home() {
     };
     reader.readAsDataURL(file);
     e.target.value = '';
+  };
+
+  const handleAttachFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    // Images → use vision path
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const dataUrl = ev.target!.result as string;
+        setPendingImage({ data: dataUrl.split(',')[1], type: file.type || 'image/jpeg', src: dataUrl });
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    // Text files → read client-side
+    const textExts = /\.(txt|md|csv|json|py|js|ts|html|css|xml|yaml|yml)$/i;
+    if (file.type.startsWith('text/') || textExts.test(file.name)) {
+      const content = await file.text();
+      setPendingFile({ name: file.name, content, fileType: 'text' });
+      return;
+    }
+
+    // PDFs and other → extract via server
+    setFileLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const resp = await fetch('/api/extract-text', { method: 'POST', body: fd });
+      if (resp.ok) {
+        const { text } = await resp.json();
+        setPendingFile({ name: file.name, content: text, fileType: file.name.endsWith('.pdf') ? 'pdf' : 'text' });
+      } else {
+        const { error } = await resp.json();
+        setPendingFile({ name: file.name, content: `[Could not extract text: ${error}]`, fileType: 'pdf' });
+      }
+    } catch {
+      setPendingFile({ name: file.name, content: `[File attached: ${file.name}]`, fileType: 'pdf' });
+    } finally {
+      setFileLoading(false);
+    }
   };
 
   const quickSend = (text: string) => { setInputValue(text); setTimeout(sendMessage, 0); };
@@ -611,6 +669,30 @@ export default function Home() {
                   <button className="remove-img" onClick={() => setPendingImage(null)}>✕</button>
                 </div>
               )}
+              {fileLoading && (
+                <div className="file-preview">
+                  <div className="file-preview-icon pdf">📄</div>
+                  <div className="file-preview-info">
+                    <div className="file-preview-name">Extracting text…</div>
+                    <div className="file-preview-meta">Processing PDF</div>
+                  </div>
+                  <div className="file-loading-spinner" />
+                </div>
+              )}
+              {pendingFile && !fileLoading && (
+                <div className="file-preview">
+                  <div className={`file-preview-icon ${pendingFile.fileType}`}>
+                    {pendingFile.fileType === 'pdf' ? '📄' : '📝'}
+                  </div>
+                  <div className="file-preview-info">
+                    <div className="file-preview-name">{pendingFile.name}</div>
+                    <div className="file-preview-meta">
+                      {pendingFile.content.length.toLocaleString()} chars extracted · ready to send
+                    </div>
+                  </div>
+                  <button className="remove-img" onClick={() => setPendingFile(null)}>✕</button>
+                </div>
+              )}
               <div className="hint-row">
                 {['Solve: ', 'Check my working: ', 'Explain: ', 'Common mistakes in: '].map((hint, i) => (
                   <div key={i} className="hint-tag" onClick={() => setInputValue(hint)}>
@@ -619,12 +701,23 @@ export default function Home() {
                 ))}
               </div>
               <div className="input-row">
-                <button className="icon-btn" onClick={() => fileInputRef.current?.click()} title="Upload exam paper">
+                <button className="icon-btn" onClick={() => fileInputRef.current?.click()} title="Upload image">
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
                   </svg>
                 </button>
+                <button
+                  className={`icon-btn attach-btn${pendingFile ? ' has-file' : ''}`}
+                  onClick={() => attachFileRef.current?.click()}
+                  disabled={fileLoading}
+                  title="Attach file (PDF, TXT, CSV, JSON…)"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                  </svg>
+                </button>
                 <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
+                <input ref={attachFileRef} type="file" accept=".pdf,.txt,.md,.csv,.json,.py,.js,.ts,.html,.css,.xml,.yaml,.yml,image/*" onChange={handleAttachFile} style={{ display: 'none' }} />
                 <textarea
                   ref={inputRef}
                   className="input-box"
