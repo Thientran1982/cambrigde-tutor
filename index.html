@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cambridge 9709 AI Tutor | A* Exam Coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=DM+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--ink:#1a1a2e;--ink2:#2d2d4e;--muted:#6b6b8a;--faint:#f0eff8;--border:#dddcf0;--accent:#4f46e5;--accent2:#7c3aed;--gold:#d97706;--gold-bg:#fef3c7;--green:#059669;--green-bg:#d1fae5;--red:#dc2626;--red-bg:#fee2e2;--white:#ffffff;--surface:#f8f8fd}
+html,body{height:100%;font-family:'Syne',sans-serif;background:var(--surface);color:var(--ink);overflow:hidden}
+.app{display:flex;flex-direction:column;height:100vh}
+.header{background:var(--ink);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--accent);flex-shrink:0}
+.logo-badge{background:var(--accent);color:white;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;padding:3px 8px;border-radius:4px;letter-spacing:.05em}
+.header-title{color:white;font-size:16px;font-weight:700;letter-spacing:-.02em}
+.header-sub{color:#8080b0;font-size:11px;font-family:'DM Mono',monospace;margin-top:1px}
+.level-badge{display:flex;align-items:center;gap:6px;background:rgba(212,175,55,.13);border:1px solid rgba(212,175,55,.3);border-radius:20px;padding:4px 12px}
+.level-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.level-text{color:var(--gold);font-size:11px;font-weight:500;font-family:'DM Mono',monospace}
+.api-banner{background:linear-gradient(90deg,#1e1b4b,#312e81);border-bottom:1px solid rgba(99,102,241,.4);padding:8px 20px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.api-banner label{color:#a5b4fc;font-size:11px;font-family:'DM Mono',monospace;white-space:nowrap}
+.api-input{flex:1;max-width:340px;background:rgba(255,255,255,.08);border:1px solid rgba(99,102,241,.4);border-radius:6px;padding:6px 11px;color:white;font-family:'DM Mono',monospace;font-size:11px;outline:none}
+.api-input::placeholder{color:#6060a0}
+.api-save-btn{background:var(--accent);color:white;border:none;border-radius:6px;padding:6px 14px;font-family:'Syne',sans-serif;font-size:11px;font-weight:500;cursor:pointer}
+.api-save-btn:hover{background:var(--accent2)}
+.api-status{font-size:10px;font-family:'DM Mono',monospace;padding:3px 8px;border-radius:4px}
+.api-status.ok{background:var(--green-bg);color:var(--green)}
+.api-status.err{background:var(--red-bg);color:var(--red)}
+.tabs{display:flex;background:var(--white);border-bottom:1px solid var(--border);flex-shrink:0;padding:0 20px}
+.tab{padding:10px 18px;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;display:flex;align-items:center;gap:6px}
+.tab:hover{color:var(--ink)}.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.layout{display:flex;flex:1;overflow:hidden}
+.sidebar{width:220px;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.sidebar-section{padding:14px;border-bottom:1px solid var(--border)}
+.sidebar-label{font-size:9px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:9px}
+.topic-chip{display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;transition:all .15s;font-size:12px;color:var(--ink2);margin-bottom:3px;border:1px solid transparent}
+.topic-chip:hover{background:var(--faint);border-color:var(--border)}.topic-chip.active{background:var(--accent);color:white;border-color:var(--accent)}
+.topic-dot{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.5;flex-shrink:0}
+.quick-chip{background:var(--faint);border:1px solid var(--border);border-radius:5px;padding:6px 8px;font-size:11px;color:var(--ink2);cursor:pointer;margin-bottom:4px;transition:all .15s;line-height:1.35;display:block;width:100%;text-align:left}
+.quick-chip:hover{background:var(--accent);color:white;border-color:var(--accent)}
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}
+.stat-box{background:var(--faint);border:1px solid var(--border);border-radius:6px;padding:7px 8px;text-align:center}
+.stat-num{font-size:18px;font-weight:700;color:var(--accent);font-family:'DM Mono',monospace}
+.stat-label{font-size:9px;color:var(--muted);margin-top:1px;font-family:'DM Mono',monospace}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.panel{display:none;flex:1;flex-direction:column;overflow:hidden}.panel.active{display:flex}
+.chat-area{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px}
+.welcome-card{background:linear-gradient(135deg,#1a1a2e 0%,#2d2d4e 100%);border-radius:12px;padding:22px;color:white;border:1px solid rgba(79,70,229,.35)}
+.welcome-eyebrow{font-family:'DM Mono',monospace;font-size:9px;color:#6060a0;letter-spacing:.1em;margin-bottom:7px}
+.welcome-title{font-family:'Crimson Pro',serif;font-size:24px;font-weight:600;margin-bottom:5px;letter-spacing:-.02em}
+.welcome-sub{font-size:12px;color:#9090b8;line-height:1.5;margin-bottom:16px}
+.cap-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cap-item{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:9px 11px;font-size:11px;color:#c0c0d8;line-height:1.3}
+.cap-icon{font-size:13px;display:block;margin-bottom:4px}
+.msg{display:flex;gap:9px;align-items:flex-start}.msg.user{flex-direction:row-reverse}
+.avatar{width:31px;height:31px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;font-family:'DM Mono',monospace}
+.avatar.ai{background:var(--ink);color:var(--accent);border:1px solid var(--border)}.avatar.user{background:var(--accent);color:white}
+.bubble{max-width:78%;background:var(--white);border:1px solid var(--border);border-radius:11px;padding:12px 15px;font-size:13px;line-height:1.68;color:var(--ink)}
+.bubble.user{background:var(--accent);border-color:var(--accent);color:white;border-radius:11px 4px 11px 11px}
+.bubble.ai{border-radius:4px 11px 11px 11px}
+.bubble h3{font-size:10px;font-family:'DM Mono',monospace;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;margin:13px 0 7px;padding-top:11px;border-top:1px solid var(--border)}
+.bubble h3:first-child{margin-top:0;border-top:none;padding-top:0}
+.bubble p{margin-bottom:6px}.bubble p:last-child{margin-bottom:0}
+.bubble ul{padding-left:16px;margin-bottom:7px}.bubble ul li{margin-bottom:3px}
+.math-block{background:var(--ink);color:#a5f3fc;font-family:'DM Mono',monospace;font-size:11px;padding:10px 13px;border-radius:6px;margin:8px 0;line-height:1.7;overflow-x:auto}
+.step-row{display:flex;align-items:flex-start;gap:5px;margin-bottom:6px}
+.step-num{display:inline-flex;width:20px;height:20px;background:var(--accent);color:white;border-radius:50%;font-size:10px;font-weight:700;align-items:center;justify-content:center;flex-shrink:0;font-family:'DM Mono',monospace;margin-top:2px}
+.badge{display:inline-block;font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:10px;font-weight:500;margin:1px}
+.badge.m{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}.badge.a{background:var(--green-bg);color:var(--green);border:1px solid #6ee7b7}
+.badge.hard{background:#fff7ed;color:#c2410c;border:1px solid #fdba74}.badge.medium{background:var(--gold-bg);color:var(--gold);border:1px solid #fde68a}.badge.easy{background:var(--green-bg);color:var(--green);border:1px solid #6ee7b7}
+.typing-indicator{display:flex;align-items:center;gap:4px;padding:5px 2px}
+.typing-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
+.typing-dot:nth-child(2){animation-delay:.2s}.typing-dot:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,100%{opacity:.25}50%{opacity:1}}
+.img-preview{display:flex;align-items:center;gap:8px;background:var(--faint);border:1px solid var(--border);border-radius:7px;padding:7px 11px;margin-bottom:8px;font-size:12px}
+.img-preview img{width:40px;height:40px;object-fit:cover;border-radius:5px;border:1px solid var(--border)}
+.remove-img{margin-left:auto;cursor:pointer;color:var(--muted);padding:2px 5px;border-radius:4px}.remove-img:hover{background:var(--red-bg);color:var(--red)}
+.input-area{border-top:1px solid var(--border);background:var(--white);padding:12px 18px;flex-shrink:0}
+.hint-row{display:flex;gap:5px;margin-bottom:9px;flex-wrap:wrap}
+.hint-tag{background:var(--faint);border:1px solid var(--border);border-radius:5px;padding:3px 9px;font-size:10px;color:var(--muted);cursor:pointer;transition:all .15s;font-family:'DM Mono',monospace}
+.hint-tag:hover{background:var(--accent);color:white;border-color:var(--accent)}
+.input-row{display:flex;gap:7px;align-items:flex-end}
+.input-box{flex:1;border:1.5px solid var(--border);border-radius:9px;padding:9px 13px;font-family:'Syne',sans-serif;font-size:13px;color:var(--ink);background:var(--surface);resize:none;outline:none;transition:border-color .15s;min-height:42px;max-height:120px}
+.input-box:focus{border-color:var(--accent)}
+.icon-btn{width:42px;height:42px;border:1.5px solid var(--border);border-radius:9px;background:var(--white);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.icon-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--faint)}
+.send-btn{width:42px;height:42px;background:var(--accent);border:none;border-radius:9px;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.send-btn:hover{background:var(--accent2)}.send-btn:disabled{background:var(--border);cursor:not-allowed}
+/* EXAM */
+.exam-panel{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:18px}
+.exam-setup{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:22px}
+.exam-setup-title{font-family:'Crimson Pro',serif;font-size:20px;font-weight:600;margin-bottom:4px}
+.exam-setup-sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+.setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+.setup-field label{font-size:9px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:6px}
+.setup-select{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px 11px;font-family:'Syne',sans-serif;font-size:12px;color:var(--ink);background:var(--surface);outline:none;cursor:pointer}
+.setup-select:focus{border-color:var(--accent)}
+.topic-checkboxes{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}
+.topic-cb{display:flex;align-items:center;gap:7px;padding:6px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;transition:all .15s;font-size:11px;user-select:none}
+.topic-cb:hover{border-color:var(--accent);background:var(--faint)}.topic-cb.checked{border-color:var(--accent);background:var(--faint);color:var(--accent);font-weight:500}
+.topic-cb input{width:12px;height:12px;accent-color:var(--accent)}
+.start-exam-btn{width:100%;background:var(--accent);color:white;border:none;border-radius:10px;padding:13px;font-family:'Syne',sans-serif;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s}
+.start-exam-btn:hover{background:var(--accent2)}.start-exam-btn:disabled{background:var(--border);cursor:not-allowed}
+.active-exam{display:none;flex-direction:column}
+.exam-topbar{background:var(--ink);border-radius:12px 12px 0 0;padding:14px 20px;display:flex;align-items:center;justify-content:space-between}
+.exam-paper-label{font-family:'DM Mono',monospace;font-size:10px;color:#6060a0;letter-spacing:.08em}
+.exam-title-text{color:white;font-size:14px;font-weight:600}
+.timer-display{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:white;letter-spacing:.05em;min-width:70px;text-align:right}
+.timer-display.warning{color:#fbbf24}.timer-display.danger{color:#f87171;animation:timerPulse 1s infinite}
+@keyframes timerPulse{0%,100%{opacity:1}50%{opacity:.5}}
+.progress-bar-outer{height:4px;background:rgba(255,255,255,.1);overflow:hidden}
+.progress-bar-inner{height:100%;background:var(--accent);transition:width .5s}
+.questions-area{background:var(--white);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;overflow:hidden}
+.loading-questions{padding:40px;text-align:center;color:var(--muted)}
+.loading-spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.exam-question-card{border-bottom:1px solid var(--border);padding:20px 22px}
+.exam-question-card:last-child{border-bottom:none}
+.q-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+.q-num{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;color:var(--accent);background:var(--faint);padding:3px 9px;border-radius:10px;border:1px solid var(--border)}
+.q-marks{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.q-topic-badge{font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:4px;background:var(--gold-bg);color:var(--gold);border:1px solid #fde68a}
+.q-text{font-size:13.5px;line-height:1.7;color:var(--ink);margin-bottom:12px}
+.q-math{background:#f8f9ff;border:1px solid #e0e3ff;border-radius:6px;padding:9px 13px;font-family:'DM Mono',monospace;font-size:12px;color:#3730a3;margin:8px 0;line-height:1.6}
+.answer-area{width:100%;min-height:90px;border:1.5px solid var(--border);border-radius:8px;padding:10px 13px;font-family:'DM Mono',monospace;font-size:12px;color:var(--ink);background:var(--surface);resize:vertical;outline:none;transition:border-color .15s;line-height:1.6}
+.answer-area:focus{border-color:var(--accent)}
+.exam-footer{background:var(--white);border-top:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.submit-exam-btn{background:var(--green);color:white;border:none;border-radius:9px;padding:10px 22px;font-family:'Syne',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px;transition:background .15s}
+.submit-exam-btn:hover{background:#047857}.submit-exam-btn:disabled{background:var(--border);cursor:not-allowed;color:var(--muted)}
+.q-progress-text{font-size:12px;font-family:'DM Mono',monospace;color:var(--muted)}
+.results-panel{display:none;background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.results-header{background:linear-gradient(135deg,#1a1a2e,#2d2d4e);padding:22px;color:white}
+.results-grade{font-family:'DM Mono',monospace;font-size:48px;font-weight:500;line-height:1;margin-bottom:4px}
+.results-label{font-size:12px;color:#9090b8;margin-bottom:14px}
+.results-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.result-stat{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:9px;text-align:center}
+.result-stat-num{font-family:'DM Mono',monospace;font-size:17px;font-weight:500;color:white}
+.result-stat-label{font-size:9px;color:#7070a0;margin-top:2px;font-family:'DM Mono',monospace}
+.results-body{padding:18px 20px}
+.result-q-row{border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px}
+.result-q-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.result-score-badge{font-family:'DM Mono',monospace;font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px}
+.score-full{background:var(--green-bg);color:var(--green);border:1px solid #6ee7b7}
+.score-partial{background:var(--gold-bg);color:var(--gold);border:1px solid #fde68a}
+.score-zero{background:var(--red-bg);color:var(--red);border:1px solid #fca5a5}
+.result-feedback{font-size:12px;color:var(--ink2);line-height:1.6;background:var(--faint);border-radius:6px;padding:9px 12px;margin-top:6px}
+.result-answer-box{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);margin-top:5px;line-height:1.5}
+.result-answer-box strong{color:var(--ink)}
+.new-exam-btn{width:100%;background:var(--accent);color:white;border:none;border-radius:9px;padding:11px;font-family:'Syne',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-top:14px;transition:background .15s}
+.new-exam-btn:hover{background:var(--accent2)}
+/* HISTORY */
+.history-panel{flex:1;overflow-y:auto;padding:20px 24px}
+.history-empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.history-empty-icon{font-size:36px;margin-bottom:12px}
+.history-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.history-title{font-size:16px;font-weight:600}
+.clear-history-btn{font-size:11px;color:var(--red);background:var(--red-bg);border:1px solid #fca5a5;border-radius:6px;padding:4px 10px;cursor:pointer;font-family:'DM Mono',monospace}
+.clear-history-btn:hover{background:var(--red);color:white}
+.history-stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.h-stat{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+.h-stat-num{font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent)}
+.h-stat-label{font-size:10px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace}
+.history-card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;transition:all .15s}
+.history-card:hover{border-color:var(--accent)}
+.hc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.hc-grade{font-family:'DM Mono',monospace;font-size:20px;font-weight:600}
+.hc-date{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted)}
+.hc-meta{display:flex;gap:5px;flex-wrap:wrap}
+.hc-tag{font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:4px;background:var(--faint);color:var(--muted);border:1px solid var(--border)}
+.perf-row{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.perf-label{font-size:11px;color:var(--ink2);width:130px;flex-shrink:0}
+.perf-bar-outer{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.perf-bar-inner{height:100%;border-radius:3px;transition:width .6s}
+.perf-pct{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);width:35px;text-align:right;flex-shrink:0}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+#fileInput{display:none}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="header">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div>
+      <div style="display:flex;align-items:center;gap:8px"><span class="logo-badge">CAIE 9709</span><span class="header-title">Cambridge A-Level Tutor</span></div>
+      <div class="header-sub">Pure Mathematics · Statistics · Mechanics</div>
+    </div>
+  </div>
+  <div class="level-badge"><div class="level-dot"></div><span class="level-text" id="levelDisplay">Ready</span></div>
+</div>
+<div class="api-banner">
+  <label>🔑 API Key:</label>
+  <input type="password" class="api-input" id="apiKeyInput" placeholder="sk-ant-api03-...">
+  <button class="api-save-btn" onclick="saveApiKey()">Save</button>
+  <span class="api-status" id="apiStatus" style="display:none"></span>
+  <span style="color:#5050a0;font-size:10px;font-family:'DM Mono',monospace;margin-left:auto">Stored locally · <a href="https://console.anthropic.com" target="_blank" style="color:#818cf8">Get key</a></span>
+</div>
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('tutor')" id="tab-tutor">🎓 AI Tutor</div>
+  <div class="tab" onclick="switchTab('exam')" id="tab-exam">📝 Exam Mode</div>
+  <div class="tab" onclick="switchTab('history')" id="tab-history">📊 History & Stats</div>
+</div>
+<div class="layout">
+<div class="sidebar">
+  <div class="sidebar-section">
+    <div class="sidebar-label">Paper Topics</div>
+    <div class="topic-chip active" onclick="setTopic(this,'All Topics')"><div class="topic-dot"></div>All Topics</div>
+    <div class="topic-chip" onclick="setTopic(this,'Pure 1')"><div class="topic-dot"></div>Pure 1</div>
+    <div class="topic-chip" onclick="setTopic(this,'Pure 2/3')"><div class="topic-dot"></div>Pure 2/3</div>
+    <div class="topic-chip" onclick="setTopic(this,'Statistics 1')"><div class="topic-dot"></div>Statistics 1</div>
+    <div class="topic-chip" onclick="setTopic(this,'Mechanics')"><div class="topic-dot"></div>Mechanics</div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Quick Practice</div>
+    <button class="quick-chip" onclick="quickSend('Give me a hard integration by parts question from Cambridge 9709')">Integration by Parts</button>
+    <button class="quick-chip" onclick="quickSend('Give me a Cambridge binomial theorem question with full mark scheme')">Binomial Theorem</button>
+    <button class="quick-chip" onclick="quickSend('Give me a normal distribution question from Cambridge Statistics 1')">Normal Distribution</button>
+    <button class="quick-chip" onclick="quickSend('Give me a kinematics problem with variable acceleration')">Kinematics</button>
+    <button class="quick-chip" onclick="quickSend('Give me a Cambridge 9709 3D vectors question with dot product')">3D Vectors</button>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Session Stats</div>
+    <div class="stat-row">
+      <div class="stat-box"><div class="stat-num" id="qCount">0</div><div class="stat-label">Questions</div></div>
+      <div class="stat-box"><div class="stat-num" id="examCount">0</div><div class="stat-label">Exams</div></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-box" style="grid-column:span 2"><div class="stat-num" id="avgScore">—</div><div class="stat-label">Avg Score</div></div>
+    </div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Exam Shortcuts</div>
+    <button class="quick-chip" onclick="switchTab('exam')">🎯 Start New Exam</button>
+    <button class="quick-chip" onclick="quickSend('What are the top 5 examiner traps in Cambridge 9709?')">⚠️ Examiner Traps</button>
+    <button class="quick-chip" onclick="quickSend('Give me a complete A* revision strategy for Cambridge 9709')">★ A* Strategy</button>
+  </div>
+</div>
+<div class="main">
+
+<!-- TUTOR PANEL -->
+<div class="panel active" id="panel-tutor" style="flex-direction:column">
+  <div class="chat-area" id="chatArea">
+    <div class="welcome-card">
+      <div class="welcome-eyebrow">CAMBRIDGE INTERNATIONAL AS & A LEVEL MATHEMATICS</div>
+      <div class="welcome-title">Your Elite 9709 Exam Coach</div>
+      <div class="welcome-sub">Cambridge examiner logic · Mark scheme framework · Adaptive A* training</div>
+      <div class="cap-grid">
+        <div class="cap-item"><span class="cap-icon">📐</span>Step-by-step with M & A mark logic</div>
+        <div class="cap-item"><span class="cap-icon">🎯</span>Mark scheme simulation</div>
+        <div class="cap-item"><span class="cap-icon">🔍</span>Error diagnosis & weak areas</div>
+        <div class="cap-item"><span class="cap-icon">📝</span>Targeted CAIE practice questions</div>
+        <div class="cap-item"><span class="cap-icon">🖼️</span>Upload scanned exam papers</div>
+        <div class="cap-item"><span class="cap-icon">★</span>A* grade strategy & exam tips</div>
+      </div>
+    </div>
+    <div class="msg">
+      <div class="avatar ai">AI</div>
+      <div class="bubble ai"><p>Enter your <strong>Anthropic API key</strong> above to activate. Then type any 9709 question, upload a scan, or use <strong>Exam Mode</strong> to take a timed test with auto-grading.</p></div>
+    </div>
+  </div>
+  <div class="input-area">
+    <div id="imgPreviewArea"></div>
+    <div class="hint-row">
+      <div class="hint-tag" onclick="insertHint('Solve: ')">Solve a question</div>
+      <div class="hint-tag" onclick="insertHint('Check my working: ')">Check my working</div>
+      <div class="hint-tag" onclick="insertHint('Explain: ')">Explain concept</div>
+      <div class="hint-tag" onclick="insertHint('Common mistakes in: ')">Common mistakes</div>
+    </div>
+    <div class="input-row">
+      <button class="icon-btn" onclick="document.getElementById('fileInput').click()" title="Upload exam paper">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </button>
+      <input type="file" id="fileInput" accept="image/*" onchange="handleFileUpload(event)">
+      <textarea class="input-box" id="inputBox" rows="1" placeholder="Type a Cambridge 9709 question or paste your working..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- EXAM PANEL -->
+<div class="panel" id="panel-exam">
+  <div class="exam-panel" id="examPanelInner">
+    <div class="exam-setup" id="examSetup">
+      <div class="exam-setup-title">Generate Custom Exam</div>
+      <div class="exam-setup-sub">AI generates authentic Cambridge-style questions. Timer starts when exam begins.</div>
+      <div class="setup-grid">
+        <div class="setup-field"><label>Number of Questions</label>
+          <select class="setup-select" id="numQuestions">
+            <option value="3">3 questions (~20 min)</option>
+            <option value="5" selected>5 questions (~35 min)</option>
+            <option value="8">8 questions (~55 min)</option>
+            <option value="10">10 questions (~75 min)</option>
+          </select>
+        </div>
+        <div class="setup-field"><label>Difficulty Mix</label>
+          <select class="setup-select" id="difficulty">
+            <option value="easy">Easy (AS foundation)</option>
+            <option value="mixed" selected>Mixed (Easy to Hard)</option>
+            <option value="hard">Hard (A* target)</option>
+            <option value="exam">Exam realistic (Cambridge style)</option>
+          </select>
+        </div>
+        <div class="setup-field"><label>Time Limit</label>
+          <select class="setup-select" id="timeLimit">
+            <option value="0">No timer</option>
+            <option value="20">20 minutes</option>
+            <option value="35" selected>35 minutes</option>
+            <option value="50">50 minutes</option>
+            <option value="75">75 minutes</option>
+            <option value="90">90 minutes (full paper)</option>
+          </select>
+        </div>
+        <div class="setup-field"><label>Marking Style</label>
+          <select class="setup-select" id="markingStyle">
+            <option value="auto">Auto-grade with AI feedback</option>
+            <option value="detailed">Detailed mark scheme reveal</option>
+          </select>
+        </div>
+      </div>
+      <div class="setup-field" style="margin-bottom:18px">
+        <label>Topics to Include</label>
+        <div class="topic-checkboxes" id="topicCheckboxes">
+          <label class="topic-cb checked"><input type="checkbox" value="Integration" checked onchange="toggleCb(this)"> Integration</label>
+          <label class="topic-cb checked"><input type="checkbox" value="Differentiation" checked onchange="toggleCb(this)"> Differentiation</label>
+          <label class="topic-cb checked"><input type="checkbox" value="Algebra and Functions" checked onchange="toggleCb(this)"> Algebra & Functions</label>
+          <label class="topic-cb checked"><input type="checkbox" value="Trigonometry" checked onchange="toggleCb(this)"> Trigonometry</label>
+          <label class="topic-cb checked"><input type="checkbox" value="Coordinate Geometry" checked onchange="toggleCb(this)"> Coordinate Geometry</label>
+          <label class="topic-cb checked"><input type="checkbox" value="Sequences and Series" checked onchange="toggleCb(this)"> Sequences & Series</label>
+          <label class="topic-cb"><input type="checkbox" value="Probability and Statistics" onchange="toggleCb(this)"> Probability & Stats</label>
+          <label class="topic-cb"><input type="checkbox" value="Normal Distribution" onchange="toggleCb(this)"> Normal Distribution</label>
+          <label class="topic-cb"><input type="checkbox" value="Kinematics" onchange="toggleCb(this)"> Kinematics</label>
+          <label class="topic-cb"><input type="checkbox" value="Forces and Newton Laws" onchange="toggleCb(this)"> Forces & Newton's Laws</label>
+          <label class="topic-cb"><input type="checkbox" value="Vectors" onchange="toggleCb(this)"> Vectors</label>
+          <label class="topic-cb"><input type="checkbox" value="Complex Numbers" onchange="toggleCb(this)"> Complex Numbers</label>
+        </div>
+      </div>
+      <button class="start-exam-btn" id="startExamBtn" onclick="startExam()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Generate & Start Exam
+      </button>
+    </div>
+    <div class="active-exam" id="activeExam">
+      <div class="exam-topbar">
+        <div>
+          <div class="exam-paper-label">CAMBRIDGE 9709 · AI GENERATED</div>
+          <div class="exam-title-text" id="examTitleText">Custom Exam</div>
+        </div>
+        <div id="timerDisplay" class="timer-display">--:--</div>
+      </div>
+      <div class="progress-bar-outer"><div class="progress-bar-inner" id="timerProgressBar" style="width:100%"></div></div>
+      <div class="questions-area" id="questionsArea">
+        <div class="loading-questions"><div class="loading-spinner"></div><div style="font-family:'DM Mono',monospace;font-size:12px">Generating Cambridge-style questions...</div></div>
+      </div>
+      <div class="exam-footer">
+        <div class="q-progress-text" id="qProgressText">Loading questions...</div>
+        <button class="submit-exam-btn" id="submitExamBtn" onclick="submitExam()" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Submit & Grade
+        </button>
+      </div>
+    </div>
+    <div class="results-panel" id="resultsPanel">
+      <div class="results-header">
+        <div class="results-grade" id="resultsGrade">—</div>
+        <div class="results-label" id="resultsLabel">Cambridge Grade</div>
+        <div class="results-stats" id="resultsStats"></div>
+      </div>
+      <div class="results-body" id="resultsBody"></div>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY PANEL -->
+<div class="panel" id="panel-history">
+  <div class="history-panel" id="historyPanel">
+    <div class="history-empty"><div class="history-empty-icon">📋</div><div style="font-size:14px;font-weight:500;margin-bottom:6px">No exam history yet</div><div style="font-size:12px">Complete an exam in Exam Mode to see your stats here.</div></div>
+  </div>
+</div>
+
+</div>
+</div>
+</div>
+
+<script>
+const SYSTEM_PROMPT=`You are an elite Cambridge International AS & A Level Mathematics (9709) AI Tutor and Exam Coach. Help students achieve A/A* grades. Behave like a Cambridge examiner, top-tier private tutor, exam strategy coach, and adaptive learning engine. Always align with CAIE 9709 syllabus, Cambridge mark scheme logic, examiner expectations, method marks and accuracy marks, official mathematical notation. Style: concise, structured, exam-focused, adaptive, high-precision, supportive but rigorous.
+
+PRIMARY WORKFLOW:
+1. Analyze question (paper type, topic, difficulty, subtopic)
+2. Solve step-by-step with examiner logic
+3. Simulate Cambridge mark scheme (M marks, A marks, DM marks)
+4. Detect student weak patterns if they shared an attempt
+5. Generate 3 targeted CAIE-style practice questions
+6. Provide revision strategy with A* tip
+
+FORMAT with these exact section headers:
+
+## Question Analysis
+Paper: [paper]
+Topic: [topic]
+Subtopic: [subtopic]
+Difficulty: [Easy/Medium/Hard]
+Estimated Marks: [N marks]
+Skills Tested: [list]
+Common Cambridge Trap: [specific trap]
+
+## Step-by-Step Solution
+[Numbered steps. Show full working. Explain WHY each step. Use notation: x^2, sqrt(x), dy/dx, int(f(x))dx]
+
+## Cambridge Mark Scheme Breakdown
+M marks: [what earns method marks]
+A marks: [what earns accuracy marks]
+Common reasons marks are lost:
+- [reason 1]
+- [reason 2]
+
+## Targeted Practice Questions
+### Practice Q1 [Easy] [3 marks]
+[Question]
+Hint: [small hint]
+
+### Practice Q2 [Medium] [5 marks]
+[Question]
+Hint: [small hint]
+
+### Practice Q3 [Hard] [7 marks]
+[Question]
+Hint: [small hint]
+
+## Revision Strategy
+Priority: [topic]
+Action: [specific drill]
+A* Tip: [sharp Cambridge insight]
+
+RULES: Use CAIE terminology, never hallucinate formulas, emphasize method marks, teach exam efficiency.`;
+
+let messages=[],qCount=0,currentTopic='All Topics',isTyping=false,pendingImageData=null,pendingImageType=null;
+let examQuestions=[],examAnswers=[],examTimer=null,examTimeRemaining=0,examTotalTime=0,examSettings={};
+let examHistory=JSON.parse(localStorage.getItem('cam_exam_history')||'[]');
+
+window.addEventListener('DOMContentLoaded',()=>{
+  const saved=localStorage.getItem('cam_api_key');
+  if(saved){document.getElementById('apiKeyInput').value=saved;showApiStatus('Key loaded ✓','ok');}
+  renderHistory();updateSidebarStats();
+});
+
+function saveApiKey(){
+  const key=document.getElementById('apiKeyInput').value.trim();
+  if(!key.startsWith('sk-')){showApiStatus('Invalid key','err');return;}
+  localStorage.setItem('cam_api_key',key);showApiStatus('Saved ✓','ok');
+  document.getElementById('levelDisplay').textContent='Active';
+}
+function showApiStatus(msg,type){
+  const el=document.getElementById('apiStatus');el.textContent=msg;el.className='api-status '+type;el.style.display='inline-block';
+  setTimeout(()=>el.style.display='none',3000);
+}
+function getApiKey(){return localStorage.getItem('cam_api_key')||document.getElementById('apiKeyInput').value.trim();}
+
+function switchTab(tab){
+  ['tutor','exam','history'].forEach(t=>{
+    document.getElementById('panel-'+t).classList.toggle('active',t===tab);
+    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+  });
+  if(tab==='history')renderHistory();
+}
+function setTopic(el,topic){document.querySelectorAll('.topic-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');currentTopic=topic;}
+function toggleCb(input){input.closest('.topic-cb').classList.toggle('checked',input.checked);}
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
+function insertHint(text){const b=document.getElementById('inputBox');b.value=text;b.focus();autoResize(b);}
+function quickSend(text){document.getElementById('inputBox').value=text;sendMessage();}
+
+function handleFileUpload(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const dataUrl=ev.target.result;pendingImageData=dataUrl.split(',')[1];pendingImageType=file.type||'image/jpeg';
+    document.getElementById('imgPreviewArea').innerHTML=`<div class="img-preview"><img src="${dataUrl}"><div><div style="font-weight:500;font-size:12px">Paper uploaded</div><div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted)">${file.name}</div></div><span class="remove-img" onclick="clearImage()">✕</span></div>`;
+  };
+  reader.readAsDataURL(file);e.target.value='';
+}
+function clearImage(){pendingImageData=null;pendingImageType=null;document.getElementById('imgPreviewArea').innerHTML='';}
+
+function addMessage(role,content,imgSrc){
+  const area=document.getElementById('chatArea');
+  const div=document.createElement('div');div.className='msg '+role;
+  const av=document.createElement('div');av.className='avatar '+(role==='user'?'user':'ai');av.textContent=role==='user'?'U':'AI';
+  const bub=document.createElement('div');bub.className='bubble '+(role==='user'?'user':'ai');
+  if(imgSrc)bub.innerHTML=`<img src="${imgSrc}" style="max-width:180px;border-radius:5px;margin-bottom:6px;display:block">`;
+  if(role==='assistant')bub.innerHTML+=formatResponse(content);
+  else{const p=document.createElement('p');p.textContent=content;bub.appendChild(p);}
+  div.appendChild(av);div.appendChild(bub);area.appendChild(div);area.scrollTop=area.scrollHeight;
+}
+
+function formatResponse(text){
+  let html=text;
+  html=html.replace(/## (.*?)(\n|$)/g,'<h3>$1</h3>');
+  html=html.replace(/### (.*?) \[(Easy|Medium|Hard)\] \[(\d+) marks?\]/gi,(m,title,diff,marks)=>`<div style="margin:10px 0 4px"><strong>${title}</strong> <span class="badge ${diff.toLowerCase()}">${diff}</span> <span class="badge m">${marks} marks</span></div>`);
+  html=html.replace(/### (.*?)(\n|$)/g,'<div style="font-weight:500;margin:8px 0 4px;color:var(--accent)">$1</div>');
+  html=html.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+  html=html.replace(/`([^`]+)`/g,'<code style="background:var(--faint);padding:1px 4px;border-radius:3px;font-family:\'DM Mono\',monospace;font-size:11px;color:var(--accent2)">$1</code>');
+  const lines=html.split('\n');let result='';let inUl=false;
+  for(const line of lines){
+    const t=line.trim();if(!t){if(inUl){result+='</ul>';inUl=false;}continue;}
+    if(t.match(/^\d+\. /)){
+      if(inUl){result+='</ul>';inUl=false;}
+      const num=t.match(/^(\d+)\./)[1];const rest=t.replace(/^\d+\. /,'');
+      result+=`<div class="step-row"><span class="step-num">${num}</span><span>${rest}</span></div>`;
+    }else if(t.startsWith('- ')||t.startsWith('• ')){
+      if(!inUl){result+='<ul>';inUl=true;}result+='<li>'+t.replace(/^[-•] /,'')+'</li>';
+    }else if(/^(Paper|Topic|Subtopic|Difficulty|Estimated Marks|Skills Tested|Common Cambridge Trap|Priority|Action|A\* Tip|M marks|A marks|Hint):/.test(t)){
+      if(inUl){result+='</ul>';inUl=false;}
+      const colon=t.indexOf(':');const key=t.substring(0,colon);const val=t.substring(colon+1).trim();
+      let display=val;
+      if(key==='Difficulty'){const cls=val.toLowerCase().includes('hard')?'hard':val.toLowerCase().includes('medium')?'medium':'easy';display=`<span class="badge ${cls}">${val}</span>`;}
+      else if(key==='M marks')display=`<span class="badge m">M</span> ${val}`;
+      else if(key==='A marks')display=`<span class="badge a">A</span> ${val}`;
+      else if(key==='Hint')display=`<span style="color:var(--gold);font-style:italic;font-size:12px">${val}</span>`;
+      else if(key==='A* Tip')display=`<span style="background:var(--gold-bg);color:var(--gold);padding:2px 6px;border-radius:4px;font-weight:500">${val}</span>`;
+      result+=`<p><strong style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted)">${key}:</strong> ${display}</p>`;
+    }else if(t.includes('=')&&(t.includes('^')||t.includes('int')||t.includes('dy/dx')||t.includes('sqrt')||t.includes('±')||t.includes('∫'))){
+      if(inUl){result+='</ul>';inUl=false;}result+=`<div class="math-block">${t}</div>`;
+    }else{if(inUl){result+='</ul>';inUl=false;}result+=`<p>${t}</p>`;}
+  }
+  if(inUl)result+='</ul>';return result;
+}
+
+function showTyping(){
+  const area=document.getElementById('chatArea');
+  const div=document.createElement('div');div.className='msg';div.id='typingMsg';
+  const av=document.createElement('div');av.className='avatar ai';av.textContent='AI';
+  const bub=document.createElement('div');bub.className='bubble ai';
+  bub.innerHTML='<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
+  div.appendChild(av);div.appendChild(bub);area.appendChild(div);area.scrollTop=area.scrollHeight;
+}
+function removeTyping(){const el=document.getElementById('typingMsg');if(el)el.remove();}
+
+async function callAPI(systemPrompt,userMessages,maxTokens=1500){
+  const apiKey=getApiKey();
+  if(!apiKey||!apiKey.startsWith('sk-'))throw new Error('Invalid API key');
+  const resp=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-calls':'true'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTokens,system:systemPrompt,messages:userMessages})
+  });
+  if(!resp.ok){const e=await resp.json();throw new Error(e.error?.message||'API error '+resp.status);}
+  const data=await resp.json();
+  return data.content?.map(b=>b.text||'').join('')||'';
+}
+
+async function sendMessage(){
+  if(isTyping)return;
+  const apiKey=getApiKey();
+  if(!apiKey||!apiKey.startsWith('sk-')){alert('Please enter your Anthropic API key first.');document.getElementById('apiKeyInput').focus();return;}
+  const box=document.getElementById('inputBox');const text=box.value.trim();
+  if(!text&&!pendingImageData)return;
+  const imgData=pendingImageData;const imgType=pendingImageType;
+  const imgSrc=imgData?`data:${imgType};base64,${imgData}`:null;
+  box.value='';autoResize(box);isTyping=true;document.getElementById('sendBtn').disabled=true;
+  qCount++;document.getElementById('qCount').textContent=qCount;
+  document.getElementById('levelDisplay').textContent=qCount>=3?'Active':'Assessing';
+  addMessage('user',text||'Analyze this exam paper.',imgSrc);clearImage();
+  let userContent=imgData
+    ?[{type:'image',source:{type:'base64',media_type:imgType,data:imgData}},{type:'text',text:(text||'Analyze this Cambridge exam paper and solve each question with full working and Cambridge mark scheme.')+(currentTopic!=='All Topics'?` [Focus: ${currentTopic}]`:'')}]
+    :(currentTopic!=='All Topics'?`[Focus: ${currentTopic}]\n\n`:'')+text;
+  messages.push({role:'user',content:userContent});showTyping();
+  try{
+    const reply=await callAPI(SYSTEM_PROMPT,messages);
+    removeTyping();messages.push({role:'assistant',content:reply});addMessage('assistant',reply);
+  }catch(err){removeTyping();addMessage('assistant',`Error: ${err.message}`);}
+  isTyping=false;document.getElementById('sendBtn').disabled=false;
+}
+
+// ===== EXAM MODE =====
+async function startExam(){
+  const apiKey=getApiKey();
+  if(!apiKey||!apiKey.startsWith('sk-')){alert('Please enter your Anthropic API key first.');return;}
+  const topics=[...document.querySelectorAll('#topicCheckboxes input:checked')].map(i=>i.value);
+  if(!topics.length){alert('Please select at least one topic.');return;}
+  const numQ=parseInt(document.getElementById('numQuestions').value);
+  const difficulty=document.getElementById('difficulty').value;
+  const timeLimitMin=parseInt(document.getElementById('timeLimit').value);
+  const markingStyle=document.getElementById('markingStyle').value;
+  examSettings={numQ,difficulty,timeLimitMin,markingStyle,topics};
+  document.getElementById('examSetup').style.display='none';
+  document.getElementById('activeExam').style.cssText='display:flex;flex-direction:column';
+  document.getElementById('resultsPanel').style.display='none';
+  document.getElementById('examTitleText').textContent=`${numQ}-Question ${difficulty==='exam'?'Cambridge Paper':difficulty.charAt(0).toUpperCase()+difficulty.slice(1)} Exam`;
+  document.getElementById('submitExamBtn').disabled=true;
+  document.getElementById('qProgressText').textContent='Generating questions...';
+  examQuestions=[];examAnswers=[];
+  if(examTimer){clearInterval(examTimer);examTimer=null;}
+  const prompt=`Generate exactly ${numQ} Cambridge 9709 exam questions.
+Topics: ${topics.join(', ')}
+Difficulty: ${difficulty==='mixed'?'Start easy, progressively increase to hard':difficulty==='exam'?'Realistic Cambridge paper difficulty mix':difficulty}
+Style: Authentic Cambridge 9709 with realistic mark allocations.
+Return ONLY valid JSON (no markdown, no other text):
+{"questions":[{"id":1,"topic":"Integration","subtopic":"By substitution","difficulty":"Medium","marks":6,"question":"Full question text. Be specific and Cambridge-authentic.","math_expression":"Optional key expression in text math notation","hint":"Small hint only","model_answer":"Complete worked solution with all steps","mark_scheme":"M1 for... A1 for... etc"}]}`;
+  try{
+    let raw=await callAPI('You are a Cambridge 9709 examiner. Return only valid JSON.',
+      [{role:'user',content:prompt}],1000);
+    raw=raw.replace(/```json|```/g,'').trim();
+    const parsed=JSON.parse(raw);
+    examQuestions=parsed.questions;
+    examAnswers=new Array(examQuestions.length).fill('');
+    renderExamQuestions();
+    document.getElementById('submitExamBtn').disabled=false;
+    document.getElementById('qProgressText').textContent=`${examQuestions.length} questions · ${examQuestions.reduce((a,q)=>a+q.marks,0)} marks total`;
+    if(timeLimitMin>0)startTimer(timeLimitMin*60);
+    else document.getElementById('timerDisplay').textContent='∞';
+  }catch(err){
+    document.getElementById('questionsArea').innerHTML=`<div class="loading-questions" style="color:var(--red)">Error: ${err.message}. Please try again.</div>`;
+    document.getElementById('examSetup').style.display='block';
+    document.getElementById('activeExam').style.display='none';
+  }
+}
+
+function renderExamQuestions(){
+  const area=document.getElementById('questionsArea');area.innerHTML='';
+  examQuestions.forEach((q,i)=>{
+    const card=document.createElement('div');card.className='exam-question-card';
+    const diff=(q.difficulty||'').toLowerCase();
+    const cls=diff==='hard'?'hard':diff==='easy'?'easy':'medium';
+    card.innerHTML=`
+      <div class="q-header">
+        <div style="display:flex;align-items:center;gap:7px">
+          <span class="q-num">Question ${i+1}</span>
+          <span class="badge ${cls}">${q.difficulty||'Medium'}</span>
+          <span class="q-topic-badge">${q.topic}</span>
+        </div>
+        <span class="q-marks">[${q.marks} marks]</span>
+      </div>
+      <div class="q-text">${q.question}</div>
+      ${q.math_expression?`<div class="q-math">${q.math_expression}</div>`:''}
+      <textarea class="answer-area" placeholder="Write your working here... Show all steps for method marks."
+        oninput="saveAnswer(${i},this.value)">${examAnswers[i]||''}</textarea>
+      <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);margin-top:5px">💡 ${q.hint}</div>`;
+    area.appendChild(card);
+  });
+}
+
+function saveAnswer(i,val){examAnswers[i]=val;}
+
+function startTimer(seconds){
+  examTimeRemaining=seconds;examTotalTime=seconds;updateTimerDisplay();
+  examTimer=setInterval(()=>{
+    examTimeRemaining--;updateTimerDisplay();
+    const pct=(examTimeRemaining/examTotalTime)*100;
+    document.getElementById('timerProgressBar').style.width=pct+'%';
+    if(examTimeRemaining<=0){clearInterval(examTimer);submitExam();}
+  },1000);
+}
+
+function updateTimerDisplay(){
+  const m=Math.floor(examTimeRemaining/60);const s=examTimeRemaining%60;
+  const text=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const el=document.getElementById('timerDisplay');el.textContent=text;
+  el.className='timer-display'+(examTimeRemaining<=60?' danger':examTimeRemaining<=300?' warning':'');
+}
+
+async function submitExam(){
+  if(examTimer){clearInterval(examTimer);examTimer=null;}
+  const btn=document.getElementById('submitExamBtn');
+  btn.disabled=true;btn.innerHTML='Grading...';
+  const answeredCount=examAnswers.filter(a=>a.trim().length>0).length;
+  const gradingPrompt=`You are a Cambridge 9709 examiner. Grade these student answers strictly per Cambridge mark scheme logic.
+
+${examQuestions.map((q,i)=>`QUESTION ${i+1} [${q.marks} marks] — ${q.topic}
+Question: ${q.question}
+${q.math_expression?`Math: ${q.math_expression}`:''}
+Mark Scheme: ${q.mark_scheme}
+Model Answer: ${q.model_answer}
+Student Answer: ${examAnswers[i]||'[No answer]'}`).join('\n---\n')}
+
+Return ONLY valid JSON (no markdown):
+{"results":[{"questionId":1,"marksAwarded":4,"marksAvailable":6,"grade":"partial","feedback":"Cambridge-style feedback. What was correct, what was missing, which M/A marks were earned/lost.","modelAnswer":"Brief ideal answer"}],"totalMarks":15,"totalAvailable":30,"percentage":50,"cambridgeGrade":"B","overallFeedback":"2-3 sentence performance summary and key improvement areas"}`;
+  try{
+    let raw=await callAPI('You are a Cambridge 9709 examiner. Return only valid JSON.',
+      [{role:'user',content:gradingPrompt}],1000);
+    raw=raw.replace(/```json|```/g,'').trim();
+    const grading=JSON.parse(raw);
+    showResults(grading,answeredCount);
+    saveToHistory(grading);
+  }catch(err){
+    btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Submit & Grade';
+    btn.disabled=false;alert('Grading error: '+err.message);
+  }
+}
+
+function showResults(grading,answeredCount){
+  document.getElementById('activeExam').style.display='none';
+  const rp=document.getElementById('resultsPanel');rp.style.display='block';
+  const grade=grading.cambridgeGrade||'—';
+  const gradeEl=document.getElementById('resultsGrade');
+  gradeEl.textContent=grade+(grade==='A'&&grading.percentage>=90?'*':'');
+  const gradeColors={'A*':'#d97706','A':'#059669','B':'#0891b2','C':'#6b6b8a','U':'#dc2626'};
+  gradeEl.style.color=gradeColors[grade]||'white';
+  document.getElementById('resultsLabel').textContent=grading.overallFeedback||'Cambridge Grade';
+  const timeTaken=examSettings.timeLimitMin>0?formatTimeTaken():'—';
+  document.getElementById('resultsStats').innerHTML=`
+    <div class="result-stat"><div class="result-stat-num">${grading.totalMarks}/${grading.totalAvailable}</div><div class="result-stat-label">Score</div></div>
+    <div class="result-stat"><div class="result-stat-num">${Math.round(grading.percentage)}%</div><div class="result-stat-label">Percentage</div></div>
+    <div class="result-stat"><div class="result-stat-num">${answeredCount}/${examQuestions.length}</div><div class="result-stat-label">Attempted</div></div>
+    <div class="result-stat"><div class="result-stat-num">${timeTaken}</div><div class="result-stat-label">Time Used</div></div>`;
+  const body=document.getElementById('resultsBody');body.innerHTML='';
+  (grading.results||[]).forEach((r,i)=>{
+    const q=examQuestions[i]||{};
+    const pct=r.marksAvailable>0?r.marksAwarded/r.marksAvailable:0;
+    const scoreClass=pct>=0.8?'score-full':pct>=0.4?'score-partial':'score-zero';
+    const div=document.createElement('div');div.className='result-q-row';
+    div.innerHTML=`
+      <div class="result-q-top">
+        <span class="result-score-badge ${scoreClass}">${r.marksAwarded}/${r.marksAvailable} marks</span>
+        <span style="font-size:12px;font-weight:500">Q${i+1}: ${q.topic||''}</span>
+        ${q.difficulty?`<span class="badge ${(q.difficulty||'').toLowerCase()}">${q.difficulty}</span>`:''}
+      </div>
+      <div class="result-feedback">${r.feedback}</div>
+      <div class="result-answer-box"><strong>Model answer:</strong> ${r.modelAnswer||q.model_answer||'See mark scheme'}</div>`;
+    body.appendChild(div);
+  });
+  const newBtn=document.createElement('button');newBtn.className='new-exam-btn';newBtn.textContent='← New Exam';newBtn.onclick=resetExam;body.appendChild(newBtn);
+  const histBtn=document.createElement('button');histBtn.className='new-exam-btn';histBtn.style.cssText='background:var(--ink);margin-top:8px';histBtn.textContent='📊 View Full History';histBtn.onclick=()=>switchTab('history');body.appendChild(histBtn);
+}
+
+function formatTimeTaken(){
+  const used=examSettings.timeLimitMin*60-examTimeRemaining;
+  const m=Math.floor(Math.max(used,0)/60);const s=Math.max(used,0)%60;
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+function resetExam(){
+  document.getElementById('activeExam').style.display='none';
+  document.getElementById('resultsPanel').style.display='none';
+  document.getElementById('examSetup').style.display='block';
+  document.getElementById('submitExamBtn').innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Submit & Grade';
+  document.getElementById('submitExamBtn').disabled=true;
+}
+
+function saveToHistory(grading){
+  const grade=grading.cambridgeGrade+(grading.percentage>=90&&grading.cambridgeGrade==='A'?'*':'');
+  const record={id:Date.now(),date:new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}),
+    grade,percentage:Math.round(grading.percentage),totalMarks:grading.totalMarks,totalAvailable:grading.totalAvailable,
+    topics:examSettings.topics,difficulty:examSettings.difficulty,numQ:examSettings.numQ,
+    feedback:grading.overallFeedback,results:grading.results,questions:examQuestions};
+  examHistory.unshift(record);
+  if(examHistory.length>50)examHistory=examHistory.slice(0,50);
+  localStorage.setItem('cam_exam_history',JSON.stringify(examHistory));
+  updateSidebarStats();
+}
+
+function updateSidebarStats(){
+  document.getElementById('examCount').textContent=examHistory.length;
+  if(examHistory.length>0){
+    const avg=Math.round(examHistory.reduce((a,h)=>a+h.percentage,0)/examHistory.length);
+    document.getElementById('avgScore').textContent=avg+'%';
+  }
+}
+
+function renderHistory(){
+  const panel=document.getElementById('historyPanel');
+  if(!examHistory.length){
+    panel.innerHTML='<div class="history-empty"><div class="history-empty-icon">📋</div><div style="font-size:14px;font-weight:500;margin-bottom:6px">No exam history yet</div><div style="font-size:12px">Complete an exam in Exam Mode to see your stats here.</div></div>';
+    return;
+  }
+  const avgPct=Math.round(examHistory.reduce((a,h)=>a+h.percentage,0)/examHistory.length);
+  const gradeOrder=['A*','A','B','C','D','E','U'];
+  const bestGrade=examHistory.reduce((best,h)=>gradeOrder.indexOf(h.grade)<gradeOrder.indexOf(best)?h.grade:best,'U');
+  const topicScores={};
+  examHistory.forEach(h=>{
+    if(h.results&&h.questions){
+      h.results.forEach((r,i)=>{
+        const topic=h.questions[i]?.topic||'Unknown';
+        if(!topicScores[topic])topicScores[topic]={earned:0,available:0};
+        topicScores[topic].earned+=r.marksAwarded||0;topicScores[topic].available+=r.marksAvailable||1;
+      });
+    }
+  });
+  const topicPerf=Object.entries(topicScores).map(([t,s])=>({topic:t,pct:Math.round(s.earned/s.available*100)})).sort((a,b)=>a.pct-b.pct);
+  const gc=g=>({'A*':'#d97706','A':'#059669','B':'#0891b2','C':'#6b6b8a','U':'#dc2626'})[g[0]]||'var(--muted)';
+  const bc=pct=>pct>=70?'var(--green)':pct>=50?'var(--gold)':'var(--red)';
+  panel.innerHTML=`
+    <div class="history-header"><div class="history-title">Exam History & Performance</div><button class="clear-history-btn" onclick="clearHistory()">Clear All</button></div>
+    <div class="history-stats-row">
+      <div class="h-stat"><div class="h-stat-num">${examHistory.length}</div><div class="h-stat-label">Exams Taken</div></div>
+      <div class="h-stat"><div class="h-stat-num">${avgPct}%</div><div class="h-stat-label">Average Score</div></div>
+      <div class="h-stat"><div class="h-stat-num" style="color:${gc(bestGrade)}">${bestGrade}</div><div class="h-stat-label">Best Grade</div></div>
+    </div>
+    ${topicPerf.length?`<div style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px">
+      <div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px">Performance by Topic</div>
+      ${topicPerf.map(t=>`<div class="perf-row"><div class="perf-label">${t.topic}</div><div class="perf-bar-outer"><div class="perf-bar-inner" style="width:${t.pct}%;background:${bc(t.pct)}"></div></div><div class="perf-pct">${t.pct}%</div></div>`).join('')}
+    </div>`:''}
+    ${examHistory.map(h=>`<div class="history-card">
+      <div class="hc-top">
+        <div class="hc-grade" style="color:${gc(h.grade)}">${h.grade}</div>
+        <div style="text-align:right"><div style="font-size:13px;font-weight:500;font-family:'DM Mono',monospace">${h.percentage}%</div><div class="hc-date">${h.date}</div></div>
+      </div>
+      <div class="hc-meta">
+        <span class="hc-tag">${h.numQ} questions</span>
+        <span class="hc-tag">${h.totalMarks}/${h.totalAvailable} marks</span>
+        <span class="hc-tag">${h.difficulty}</span>
+        ${h.topics.slice(0,2).map(t=>`<span class="hc-tag">${t}</span>`).join('')}${h.topics.length>2?`<span class="hc-tag">+${h.topics.length-2} more</span>`:''}
+      </div>
+      ${h.feedback?`<div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5">${h.feedback}</div>`:''}
+    </div>`).join('')}`;
+}
+
+function clearHistory(){
+  if(!confirm('Clear all exam history?'))return;
+  examHistory=[];localStorage.removeItem('cam_exam_history');updateSidebarStats();renderHistory();
+}
+</script>
+</body>
+</html>
