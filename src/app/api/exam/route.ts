@@ -6,7 +6,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { retrieveChunks } from '@/lib/rag';
 
 export const runtime = 'nodejs';
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
     try {
       const ragResult = await retrieveChunks(ragQuery, {
-        topK: 8,
+        topK: 6,
         yearFrom: 2020,
         yearTo: 2024,
       });
@@ -41,14 +41,14 @@ export async function POST(req: NextRequest) {
     const systemPrompt = `You are a Cambridge 9709 examiner generating authentic exam questions.
 ${ragContext ? `\nUse the following official Cambridge past paper examples as style reference:\n\n${ragContext}\n\n` : ''}
 Generate questions that authentically match Cambridge style — same difficulty gradients, notation, command words, and mark allocation as real 9709 papers.
-Return ONLY valid JSON, no markdown fences, no other text.`;
+Return ONLY valid JSON, no markdown fences, no other text. Be concise in all fields.`;
 
     const userPrompt = `Generate exactly ${numQuestions} Cambridge 9709 exam questions.
 
 Topics: ${topics.join(', ')}
 Difficulty: ${difficulty === 'mixed' ? 'Progressive Easy → Medium → Hard' : difficulty === 'exam' ? 'Authentic Cambridge paper mix' : difficulty}
 
-Return this exact JSON structure:
+Return this exact JSON structure (keep model_answer and mark_scheme SHORT — key steps only, max 3 lines each):
 {
   "questions": [
     {
@@ -58,21 +58,25 @@ Return this exact JSON structure:
       "difficulty": "Medium",
       "marks": 6,
       "question": "Full Cambridge-style question text with all necessary information.",
-      "math_expression": "Key expression in text notation e.g. int(x*e^x)dx or dy/dx = 3x^2 - 2",
-      "hint": "Small examiner hint without giving away the method",
-      "model_answer": "Complete worked solution, all steps shown",
-      "mark_scheme": "M1 for correct method... A1 for... etc",
-      "cambridge_source": "Style reference: similar to 9709 Paper 1 Q7 style"
+      "math_expression": "Key expression e.g. int(x*e^x)dx or dy/dx = 3x^2 - 2",
+      "hint": "One-line examiner hint without giving away the method",
+      "model_answer": "Step 1: ... Step 2: ... Final answer: ...",
+      "mark_scheme": "M1 correct method, A1 correct integral, A1 final answer",
+      "cambridge_source": "Style: 9709 Paper 1 Q7"
     }
   ]
 }`;
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-5-20250929',
-      max_tokens: Math.min(8192, 1200 + numQuestions * 600),
+      max_tokens: 8192,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });
+
+    if (response.stop_reason === 'max_tokens') {
+      console.warn(`Exam generation hit max_tokens for ${numQuestions} questions`);
+    }
 
     const rawText = response.content
       .map(b => (b.type === 'text' ? b.text : ''))
@@ -85,16 +89,38 @@ Return this exact JSON structure:
     try {
       parsed = JSON.parse(rawText);
     } catch {
-      // Attempt to recover truncated JSON by closing open structures
-      const repaired = rawText
-        .replace(/,\s*$/, '')          // trailing comma
-        .replace(/([^}\]]),?\s*$/, '$1') // last partial field
-        + (rawText.endsWith('}') ? '' : (rawText.includes('"questions"') ? ']}' : '}'));
+      // Attempt progressive JSON repair for truncated responses
+      let repaired = rawText;
+
+      // Remove trailing incomplete field (e.g. "model_answer": "partial...)
+      repaired = repaired.replace(/,?\s*"[^"]*"\s*:\s*"[^"]*$/, '');
+      // Remove trailing comma
+      repaired = repaired.replace(/,\s*$/, '');
+
+      // Count open braces/brackets to close them
+      const openBraces = (repaired.match(/\{/g) || []).length - (repaired.match(/\}/g) || []).length;
+      const openBrackets = (repaired.match(/\[/g) || []).length - (repaired.match(/\]/g) || []).length;
+
+      for (let i = 0; i < openBraces + openBrackets; i++) {
+        if (i < openBrackets) repaired += ']';
+        else repaired += '}';
+      }
+      // Ensure outer structure is closed
+      if (!repaired.trimEnd().endsWith('}}') && repaired.includes('"questions"')) {
+        repaired = repaired.trimEnd().replace(/\}?\]?\}?$/, ']}');
+      }
+
       try {
         parsed = JSON.parse(repaired);
+        console.warn('Exam JSON repaired successfully');
       } catch {
-        throw new Error(`Claude response was truncated — please try again (${rawText.length} chars received)`);
+        throw new Error(`Exam generation failed — response was cut off (${rawText.length} chars). Try fewer questions or a shorter topic list.`);
       }
+    }
+
+    // Ensure questions array exists
+    if (!parsed.questions || !Array.isArray(parsed.questions) || parsed.questions.length === 0) {
+      throw new Error('No questions were generated. Please try again.');
     }
 
     return Response.json({
