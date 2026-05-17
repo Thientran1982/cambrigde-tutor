@@ -104,6 +104,7 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachFileRef = useRef<HTMLInputElement>(null);
   const docFileRef = useRef<HTMLInputElement>(null);
+  const answerRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const streamingTextRef = useRef('');
   const streamingSourcesRef = useRef<string[]>([]);
@@ -453,7 +454,8 @@ export default function Home() {
     if (examTimerRef.current) { clearInterval(examTimerRef.current); examTimerRef.current = null; }
     setIsGrading(true);
 
-    const answeredCount = examAnswers.filter(a => a.trim().length > 0).length;
+    const liveAnswers = answerRefs.current.map(r => r?.value || '');
+    const answeredCount = liveAnswers.filter(a => a.trim().length > 0).length;
     const timeTaken = examSettings && examSettings.timeLimitMin > 0
       ? (() => { const used = examSettings.timeLimitMin * 60 - examTimeRemaining; const m = Math.floor(Math.max(used,0)/60); const s = Math.max(used,0)%60; return `${m}:${String(s).padStart(2,'0')}`; })()
       : '—';
@@ -462,7 +464,7 @@ export default function Home() {
       const resp = await fetch('/api/grade', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questions: examQuestions, answers: examAnswers, examSettings }),
+        body: JSON.stringify({ questions: examQuestions, answers: liveAnswers, examSettings }),
       });
       if (!resp.ok) { const e = await resp.json(); throw new Error(e.error || 'Grading failed'); }
       const grading: GradingData = await resp.json();
@@ -949,14 +951,14 @@ export default function Home() {
                             <div className="q-text">{q.question}</div>
                             {q.math_expression && <div className="q-math">{q.math_expression}</div>}
                             <textarea
+                              ref={el => { answerRefs.current[i] = el; }}
                               className="answer-area"
                               placeholder="Write your working here... Show all steps for method marks."
-                              value={examAnswers[i] || ''}
-                              onChange={e => {
-                                const updated = [...examAnswers];
-                                updated[i] = e.target.value;
-                                setExamAnswers(updated);
-                              }}
+                              defaultValue=""
+                              autoComplete="off"
+                              autoCorrect="off"
+                              autoCapitalize="off"
+                              spellCheck={false}
                             />
                             <div style={{ fontSize: 10, fontFamily: '\'DM Mono\',monospace', color: 'var(--muted)', marginTop: 5 }}>💡 {q.hint}</div>
                           </div>
