@@ -20,7 +20,7 @@ async function embedBatch(texts: string[]): Promise<number[][]> {
       'Authorization': `Bearer ${process.env.VOYAGE_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ input: texts, model: 'voyage-large-2' }),
+    body: JSON.stringify({ input: texts, model: 'voyage-3' }),
   });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({})) as { detail?: string };
@@ -82,7 +82,7 @@ async function ensureIndex(indexName: string) {
   if (!names.includes(indexName)) {
     await pinecone.createIndex({
       name: indexName,
-      dimension: 1536,
+      dimension: 1024,
       metric: 'cosine',
       spec: { serverless: { cloud: 'aws', region: 'us-east-1' } },
     });

@@ -29,7 +29,7 @@ export async function embedQuery(query: string): Promise<number[]> {
       'Authorization': `Bearer ${process.env.VOYAGE_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ input: [query], model: 'voyage-large-2' }),
+    body: JSON.stringify({ input: [query], model: 'voyage-3' }),
   });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({})) as { detail?: string };
