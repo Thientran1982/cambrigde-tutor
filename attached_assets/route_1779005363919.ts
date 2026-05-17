@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     try {
       const ragResult = await retrieveChunks(ragQuery, {
         topK: 8,
-        yearFrom: 2020,
+        yearFrom: 2020,  // Prefer recent papers
         yearTo: 2024,
       });
       ragContext = ragResult.contextText;
@@ -59,17 +59,17 @@ Return this exact JSON structure:
       "marks": 6,
       "question": "Full Cambridge-style question text with all necessary information.",
       "math_expression": "Key expression in text notation e.g. int(x*e^x)dx or dy/dx = 3x^2 - 2",
-      "hint": "Small examiner hint without giving away the method",
+      "hint": "Small examiner hint",
       "model_answer": "Complete worked solution, all steps shown",
       "mark_scheme": "M1 for correct method... A1 for... etc",
-      "cambridge_source": "Style reference: similar to 9709 Paper 1 Q7 style"
+      "cambridge_source": "Style reference: similar to Paper 1 Q7 style"
     }
   ]
 }`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 2000,
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });

@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     const { questions, answers, examSettings } = body as {
       questions: Question[];
       answers: string[];
-      examSettings?: { topics: string[]; difficulty: string };
+      examSettings: { topics: string[]; difficulty: string };
     };
 
     if (!questions?.length || !answers?.length) {
@@ -56,20 +56,20 @@ export async function POST(req: NextRequest) {
     }
 
     const systemPrompt = `You are a strict Cambridge 9709 examiner grading student answers.
-${ragContext ? `\nUse these official Cambridge mark scheme examples as reference:\n\n${ragContext}\n` : ''}
+${ragContext ? `\nUse these official Cambridge mark scheme examples as reference for marking standards:\n\n${ragContext}\n` : ''}
 Apply Cambridge mark scheme principles strictly:
-- M marks: method marks, awarded for correct method even if arithmetic error follows
-- A marks: accuracy marks, usually depend on preceding M mark being earned
-- B marks: independent marks for specific values or statements
-- Follow-through (ft): award if student method is correct but carries forward an earlier error
-- Never award an A mark if the prerequisite M mark was not earned (unless stated "independent")
+- M marks: awarded for correct method even if arithmetic error follows
+- A marks: accuracy marks, usually depend on preceding M mark
+- B marks: independent marks for specific values/statements
+- "Follow through" (ft): award if student's method is correct but carries forward an earlier error
+- Never award A mark if M mark was not earned (unless stated "independent")
 
-Return ONLY valid JSON with no markdown fences.`;
+Return ONLY valid JSON, no markdown.`;
 
     const userPrompt = `Grade these ${questions.length} Cambridge 9709 student answers strictly.
 
 ${questions.map((q, i) => `
-QUESTION ${i + 1} [${q.marks} marks] — ${q.topic}${q.subtopic ? ` / ${q.subtopic}` : ''} (${q.difficulty})
+QUESTION ${i + 1} [${q.marks} marks] — ${q.topic} (${q.difficulty})
 Question: ${q.question}
 ${q.math_expression ? `Expression: ${q.math_expression}` : ''}
 Official Mark Scheme: ${q.mark_scheme}
@@ -86,26 +86,26 @@ Return this exact JSON:
       "marksAvailable": 6,
       "mMarks": 2,
       "mMarksAvailable": 2,
-      "aMarks": 1,
+      "aMarks": 2,
       "aMarksAvailable": 3,
       "grade": "partial",
-      "feedback": "Detailed Cambridge-style feedback. State exactly which M/A marks were earned and why. Mention what was missing or wrong.",
-      "modelAnswer": "Complete worked solution with all steps",
-      "examinerNote": "One key tip or common mistake for this question type"
+      "feedback": "Detailed Cambridge-style feedback. State exactly which M/A marks were earned and why. Mention what was missing.",
+      "modelAnswer": "Complete worked solution",
+      "examinerNote": "Common mistake or tip for this question type"
     }
   ],
   "totalMarks": 15,
   "totalAvailable": 30,
   "percentage": 50,
   "cambridgeGrade": "B",
-  "overallFeedback": "2-3 sentence examiner performance summary with key improvement areas",
+  "overallFeedback": "2-3 sentence examiner summary",
   "weakTopics": ["Integration", "Trigonometry"],
   "strongTopics": ["Differentiation"]
 }`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 2000,
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });

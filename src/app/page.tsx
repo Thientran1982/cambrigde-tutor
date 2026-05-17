@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import ResponseFormatter from '@/components/ResponseFormatter';
+import SourceCitations from '@/components/SourceCitations';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -13,14 +15,20 @@ interface ExamQuestion {
   id: number; topic: string; subtopic: string; difficulty: string;
   marks: number; question: string; math_expression?: string;
   hint: string; model_answer: string; mark_scheme: string;
+  cambridge_source?: string;
 }
 interface ExamResult {
   questionId: number; marksAwarded: number; marksAvailable: number;
+  mMarks?: number; mMarksAvailable?: number;
+  aMarks?: number; aMarksAvailable?: number;
   grade: string; feedback: string; modelAnswer: string;
+  examinerNote?: string;
 }
 interface GradingData {
   results: ExamResult[]; totalMarks: number; totalAvailable: number;
   percentage: number; cambridgeGrade: string; overallFeedback: string;
+  weakTopics?: string[]; strongTopics?: string[];
+  sources?: string[]; ragUsed?: boolean;
 }
 interface HistoryRecord {
   id: number; date: string; grade: string; percentage: number;
@@ -335,7 +343,7 @@ export default function Home() {
       const resp = await fetch('/api/grade', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questions: examQuestions, answers: examAnswers }),
+        body: JSON.stringify({ questions: examQuestions, answers: examAnswers, examSettings }),
       });
       if (!resp.ok) { const e = await resp.json(); throw new Error(e.error || 'Grading failed'); }
       const grading: GradingData = await resp.json();
@@ -566,11 +574,9 @@ export default function Home() {
                     )}
                     {msg.role === 'assistant' ? (
                       <>
-                        <div dangerouslySetInnerHTML={{ __html: formatResponse(typeof msg.content === 'string' ? msg.content : '') }} />
+                        <ResponseFormatter content={typeof msg.content === 'string' ? msg.content : ''} />
                         {msg.sources && msg.sources.length > 0 && (
-                          <div className="sources-row">
-                            {msg.sources.map((s, i) => <span key={i} className="source-tag">📚 {s}</span>)}
-                          </div>
+                          <SourceCitations sources={msg.sources} />
                         )}
                       </>
                     ) : (
@@ -844,6 +850,28 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="results-body">
+                    {/* Weak / Strong topic summary */}
+                    {(gd.weakTopics?.length || gd.strongTopics?.length) ? (
+                      <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+                        {gd.weakTopics && gd.weakTopics.length > 0 && (
+                          <div style={{ background: '#fff7ed', border: '1px solid #fdba74', borderRadius: 8, padding: '8px 12px', flex: 1, minWidth: 160 }}>
+                            <div style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: '#c2410c', fontWeight: 600, letterSpacing: '.06em', marginBottom: 6 }}>NEEDS WORK</div>
+                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                              {gd.weakTopics.map(t => <span key={t} style={{ fontSize: 11, background: 'white', border: '1px solid #fdba74', borderRadius: 4, padding: '2px 7px', color: '#c2410c' }}>{t}</span>)}
+                            </div>
+                          </div>
+                        )}
+                        {gd.strongTopics && gd.strongTopics.length > 0 && (
+                          <div style={{ background: 'var(--green-bg)', border: '1px solid #6ee7b7', borderRadius: 8, padding: '8px 12px', flex: 1, minWidth: 160 }}>
+                            <div style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: 'var(--green)', fontWeight: 600, letterSpacing: '.06em', marginBottom: 6 }}>STRONG AREAS</div>
+                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                              {gd.strongTopics.map(t => <span key={t} style={{ fontSize: 11, background: 'white', border: '1px solid #6ee7b7', borderRadius: 4, padding: '2px 7px', color: 'var(--green)' }}>{t}</span>)}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
+
                     {(gd.results || []).map((r, i) => {
                       const q = examQuestions[i] || {} as ExamQuestion;
                       const pct = r.marksAvailable > 0 ? r.marksAwarded / r.marksAvailable : 0;
@@ -854,8 +882,18 @@ export default function Home() {
                             <span className={scoreClass}>{r.marksAwarded}/{r.marksAvailable} marks</span>
                             <span style={{ fontSize: 12, fontWeight: 500 }}>Q{i + 1}: {q.topic || ''}</span>
                             {q.difficulty && <span className={`badge ${(q.difficulty || '').toLowerCase()}`}>{q.difficulty}</span>}
+                            {(r.mMarksAvailable || 0) > 0 && (
+                              <span style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: '#6b6b8a' }}>
+                                M: {r.mMarks ?? '?'}/{r.mMarksAvailable} · A: {r.aMarks ?? '?'}/{r.aMarksAvailable ?? 0}
+                              </span>
+                            )}
                           </div>
                           <div className="result-feedback">{r.feedback}</div>
+                          {r.examinerNote && (
+                            <div style={{ fontSize: 11, fontFamily: "'DM Mono',monospace", color: 'var(--gold)', background: 'var(--gold-bg)', borderRadius: 5, padding: '5px 9px', marginTop: 5 }}>
+                              💡 {r.examinerNote}
+                            </div>
+                          )}
                           <div className="result-answer-box"><strong>Model answer:</strong> {r.modelAnswer || q.model_answer || 'See mark scheme'}</div>
                         </div>
                       );
