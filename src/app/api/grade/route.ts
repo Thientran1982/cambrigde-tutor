@@ -40,7 +40,7 @@ Return ONLY valid JSON (no markdown):
 {"results":[{"questionId":1,"marksAwarded":4,"marksAvailable":6,"grade":"partial","feedback":"Cambridge-style feedback. What was correct, what was missing, which M/A marks were earned/lost.","modelAnswer":"Brief ideal answer"}],"totalMarks":15,"totalAvailable":30,"percentage":50,"cambridgeGrade":"B","overallFeedback":"2-3 sentence performance summary and key improvement areas"}`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-5-20250929',
       max_tokens: 1500,
       system: 'You are a Cambridge 9709 examiner. Return only valid JSON.',
       messages: [{ role: 'user', content: gradingPrompt }],
