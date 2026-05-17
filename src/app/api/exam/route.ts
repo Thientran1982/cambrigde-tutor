@@ -69,7 +69,7 @@ Return this exact JSON structure:
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 2000,
+      max_tokens: 8000,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });
@@ -77,10 +77,25 @@ Return this exact JSON structure:
     const rawText = response.content
       .map(b => (b.type === 'text' ? b.text : ''))
       .join('')
-      .replace(/```json|```/g, '')
+      .replace(/```json\s*/g, '')
+      .replace(/```\s*/g, '')
       .trim();
 
-    const parsed = JSON.parse(rawText);
+    let parsed;
+    try {
+      parsed = JSON.parse(rawText);
+    } catch {
+      // Attempt to recover truncated JSON by closing open structures
+      const repaired = rawText
+        .replace(/,\s*$/, '')          // trailing comma
+        .replace(/([^}\]]),?\s*$/, '$1') // last partial field
+        + (rawText.endsWith('}') ? '' : (rawText.includes('"questions"') ? ']}' : '}'));
+      try {
+        parsed = JSON.parse(repaired);
+      } catch {
+        throw new Error(`Claude response was truncated — please try again (${rawText.length} chars received)`);
+      }
+    }
 
     return Response.json({
       ...parsed,
