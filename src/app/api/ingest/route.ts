@@ -75,10 +75,24 @@ async function ensureIndex(indexName: string) {
   }
 }
 
+export async function GET(req: NextRequest) {
+  const secret = req.headers.get('x-admin-secret');
+  if (!process.env.ADMIN_SECRET) {
+    return Response.json({ ok: false, error: 'ADMIN_SECRET not set on server' }, { status: 500 });
+  }
+  if (secret !== process.env.ADMIN_SECRET) {
+    return Response.json({ ok: false, error: 'Wrong secret' }, { status: 401 });
+  }
+  return Response.json({ ok: true });
+}
+
 export async function POST(req: NextRequest) {
   const secret = req.headers.get('x-admin-secret');
+  if (!process.env.ADMIN_SECRET) {
+    return Response.json({ error: 'ADMIN_SECRET environment variable is not set on the server' }, { status: 500 });
+  }
   if (secret !== process.env.ADMIN_SECRET) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    return Response.json({ error: 'Wrong admin secret — check the ADMIN_SECRET value in Replit Secrets' }, { status: 401 });
   }
 
   try {

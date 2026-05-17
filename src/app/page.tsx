@@ -92,6 +92,8 @@ export default function Home() {
   const [examHistory, setExamHistory] = useState<HistoryRecord[]>([]);
 
   const [docSecret, setDocSecret] = useState('');
+  const [docSecretOk, setDocSecretOk] = useState<boolean | null>(null);
+  const [docSecretTesting, setDocSecretTesting] = useState(false);
   const [docFiles, setDocFiles] = useState<File[]>([]);
   const [docLoading, setDocLoading] = useState(false);
   const [docResults, setDocResults] = useState<{ file: string; status: string; chunks?: number; vectors?: number; reason?: string }[]>([]);
@@ -326,6 +328,18 @@ export default function Home() {
     }
   };
 
+  const testDocSecret = async () => {
+    if (!docSecret.trim()) { setDocSecretOk(false); return; }
+    setDocSecretTesting(true); setDocSecretOk(null);
+    try {
+      const resp = await fetch('/api/ingest', { method: 'GET', headers: { 'x-admin-secret': docSecret.trim() } });
+      setDocSecretOk(resp.ok);
+    } catch {
+      setDocSecretOk(false);
+    }
+    setDocSecretTesting(false);
+  };
+
   const handleDocFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || []).filter(f => f.name.endsWith('.pdf'));
     setDocFiles(prev => { const ex = new Set(prev.map(f => f.name)); return [...prev, ...selected.filter(f => !ex.has(f.name))]; });
@@ -350,14 +364,16 @@ export default function Home() {
       const fd = new FormData();
       batch.forEach(f => fd.append('files', f));
       try {
-        const resp = await fetch('/api/ingest', { method: 'POST', headers: { 'x-admin-secret': docSecret }, body: fd });
+        const resp = await fetch('/api/ingest', { method: 'POST', headers: { 'x-admin-secret': docSecret.trim() }, body: fd });
         const data = await resp.json();
+        if (resp.status === 401) throw new Error('Wrong admin secret — enter the ADMIN_SECRET value from Replit Secrets');
+        if (resp.status === 500) throw new Error(data.error || 'Server error');
         if (!resp.ok) throw new Error(data.error || 'Upload failed');
         allResults.push(...(data.results || []));
         setDocResults([...allResults]);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : 'Unknown error';
-        setDocError(`Batch ${Math.floor(i / 5) + 1} failed: ${msg}`);
+        setDocError(msg);
         break;
       }
     }
@@ -1112,14 +1128,43 @@ export default function Home() {
 
               {/* Admin secret */}
               <div>
-                <label style={{ display: 'block', fontSize: 10, color: 'var(--muted)', marginBottom: 5, fontWeight: 600, letterSpacing: '.07em', textTransform: 'uppercase' as const, fontFamily: "'DM Mono',monospace" }}>Admin Secret</label>
-                <input
-                  type="password"
-                  value={docSecret}
-                  onChange={e => setDocSecret(e.target.value)}
-                  placeholder="Enter ADMIN_SECRET…"
-                  style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '8px 12px', fontSize: 13, outline: 'none', background: 'var(--surface)', fontFamily: "'Syne',sans-serif", color: 'var(--ink)' }}
-                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                  <label style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, letterSpacing: '.07em', textTransform: 'uppercase' as const, fontFamily: "'DM Mono',monospace" }}>Admin Secret</label>
+                  {docSecretOk === true && <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600 }}>✓ Secret verified</span>}
+                  {docSecretOk === false && <span style={{ fontSize: 11, color: 'var(--red)', fontWeight: 600 }}>✗ Wrong secret</span>}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="password"
+                    value={docSecret}
+                    onChange={e => { setDocSecret(e.target.value); setDocSecretOk(null); }}
+                    onKeyDown={e => e.key === 'Enter' && testDocSecret()}
+                    placeholder="Enter ADMIN_SECRET from Replit Secrets…"
+                    style={{
+                      flex: 1,
+                      border: `1.5px solid ${docSecretOk === true ? 'var(--green)' : docSecretOk === false ? 'var(--red)' : 'var(--border)'}`,
+                      borderRadius: 8, padding: '8px 12px', fontSize: 13, outline: 'none',
+                      background: 'var(--surface)', fontFamily: "'Syne',sans-serif", color: 'var(--ink)'
+                    }}
+                  />
+                  <button
+                    onClick={testDocSecret}
+                    disabled={docSecretTesting || !docSecret.trim()}
+                    style={{
+                      flexShrink: 0, background: 'var(--faint)', border: '1.5px solid var(--border)',
+                      borderRadius: 8, padding: '0 14px', fontSize: 12, fontWeight: 600,
+                      cursor: docSecretTesting || !docSecret.trim() ? 'not-allowed' : 'pointer',
+                      color: 'var(--ink2)', whiteSpace: 'nowrap' as const
+                    }}
+                  >
+                    {docSecretTesting ? '…' : 'Test'}
+                  </button>
+                </div>
+                {docSecretOk === false && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
+                    Open <strong>Replit Secrets</strong> (🔑 padlock icon in the sidebar) to find or reset your <code style={{ fontFamily: "'DM Mono',monospace", background: 'var(--faint)', padding: '1px 4px', borderRadius: 3 }}>ADMIN_SECRET</code> value.
+                  </div>
+                )}
               </div>
 
               {/* Drop zone */}
