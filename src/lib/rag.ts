@@ -1,10 +1,8 @@
 // src/lib/rag.ts
 // Core RAG retrieval logic — used by /api/chat and /api/exam
 
-import OpenAI from 'openai';
 import { Pinecone } from '@pinecone-database/pinecone';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
 
 export interface RAGChunk {
@@ -25,11 +23,20 @@ export interface RAGResult {
 }
 
 export async function embedQuery(query: string): Promise<number[]> {
-  const resp = await openai.embeddings.create({
-    model: 'text-embedding-3-small',
-    input: query,
+  const resp = await fetch('https://api.voyageai.com/v1/embeddings', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.VOYAGE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ input: [query], model: 'voyage-large-2' }),
   });
-  return resp.data[0].embedding;
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({})) as { detail?: string };
+    throw new Error(`Voyage AI error ${resp.status}: ${err.detail || resp.statusText}`);
+  }
+  const data = await resp.json() as { data: { embedding: number[] }[] };
+  return data.data[0].embedding;
 }
 
 export async function retrieveChunks(

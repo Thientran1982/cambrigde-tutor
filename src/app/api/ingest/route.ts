@@ -4,18 +4,33 @@
 
 import { NextRequest } from 'next/server';
 import { Pinecone } from '@pinecone-database/pinecone';
-import OpenAI from 'openai';
 import pdf from 'pdf-parse';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
 
-const openai   = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
 
-const EMBED_MODEL = 'text-embedding-3-small';
 const CHUNK_SIZE  = 500 * 4;
-const OVERLAP     = 50  * 4;
+
+async function embedBatch(texts: string[]): Promise<number[][]> {
+  const resp = await fetch('https://api.voyageai.com/v1/embeddings', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.VOYAGE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ input: texts, model: 'voyage-large-2' }),
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({})) as { detail?: string };
+    throw new Error(`Voyage AI error ${resp.status}: ${err.detail || resp.statusText}`);
+  }
+  const data = await resp.json() as { data: { embedding: number[] }[] };
+  return data.data.map(d => d.embedding);
+}
+
+const OVERLAP = 50 * 4;
 
 function chunkText(text: string): string[] {
   const words = text.split(/\s+/);
@@ -133,10 +148,10 @@ export async function POST(req: NextRequest) {
 
       for (let b = 0; b < chunks.length; b += 100) {
         const batch = chunks.slice(b, b + 100);
-        const resp  = await openai.embeddings.create({ model: EMBED_MODEL, input: batch });
+        const embeddings = await embedBatch(batch);
         const vectors = batch.map((chunk, i) => ({
           id: `${filename.replace('.pdf', '')}_chunk_${b + i}`,
-          values: resp.data[i].embedding,
+          values: embeddings[i],
           metadata: {
             text:      chunk.substring(0, 2000),
             source:    filename,

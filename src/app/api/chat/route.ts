@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     let systemPrompt: string;
     let sources: string[] = [];
 
-    const ragAvailable = !!(process.env.OPENAI_API_KEY && process.env.PINECONE_API_KEY);
+    const ragAvailable = !!(process.env.VOYAGE_API_KEY && process.env.PINECONE_API_KEY);
 
     if (useRAG && queryText && ragAvailable) {
       try {
