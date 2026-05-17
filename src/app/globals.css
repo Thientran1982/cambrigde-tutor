@@ -179,4 +179,16 @@ html,body{height:100%;font-family:'Syne',sans-serif;background:var(--surface);co
 .perf-bar-outer{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
 .perf-bar-inner{height:100%;border-radius:3px;transition:width .6s}
 .perf-pct{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);width:35px;text-align:right;flex-shrink:0}
+.docs-panel{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:16px;max-width:700px;margin:0 auto;width:100%}
+.docs-zone{border:2px dashed var(--border);border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;background:var(--surface);transition:border-color .15s,background .15s}
+.docs-zone:hover{border-color:var(--accent);background:var(--faint)}
+.docs-zone-icon{font-size:28px;margin-bottom:8px}
+.docs-file-list{background:white;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.docs-file-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--faint)}.docs-file-item:last-child{border-bottom:none}
+.docs-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+.docs-ingest-btn{width:100%;background:var(--accent);color:white;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s;font-family:'Syne',sans-serif}
+.docs-ingest-btn:hover{background:var(--accent2)}.docs-ingest-btn:disabled{background:var(--border);color:var(--muted);cursor:not-allowed}
+.docs-result-ok{background:var(--green-bg);border:1px solid #6ee7b7;border-radius:10px;padding:14px 18px;font-size:13px;color:var(--green)}
+.docs-result-err{background:var(--red-bg);border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;color:var(--red)}
+.docs-tips{background:var(--faint);border-radius:10px;padding:16px 20px}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}

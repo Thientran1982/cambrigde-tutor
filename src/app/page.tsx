@@ -59,7 +59,7 @@ const PAPER_GROUPS = [
 const ALL_EXAM_TOPICS = PAPER_GROUPS.flatMap(g => g.topics);
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'tutor' | 'exam' | 'history'>('tutor');
+  const [activeTab, setActiveTab] = useState<'tutor' | 'exam' | 'history' | 'docs'>('tutor');
   const [currentTopic, setCurrentTopic] = useState('All Topics');
   const [expandedPapers, setExpandedPapers] = useState<Record<string, boolean>>({ 'Pure 1': true, 'Pure 2/3': false, 'Statistics 1': false, 'Mechanics': false });
   const togglePaper = (paper: string) => setExpandedPapers(prev => ({ ...prev, [paper]: !prev[paper] }));
@@ -91,10 +91,17 @@ export default function Home() {
 
   const [examHistory, setExamHistory] = useState<HistoryRecord[]>([]);
 
+  const [docSecret, setDocSecret] = useState('');
+  const [docFiles, setDocFiles] = useState<File[]>([]);
+  const [docLoading, setDocLoading] = useState(false);
+  const [docResults, setDocResults] = useState<{ file: string; status: string; chunks?: number; vectors?: number; reason?: string }[]>([]);
+  const [docError, setDocError] = useState('');
+
   const chatAreaRef = useRef<HTMLDivElement>(null);
   const examTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachFileRef = useRef<HTMLInputElement>(null);
+  const docFileRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const streamingTextRef = useRef('');
   const streamingSourcesRef = useRef<string[]>([]);
@@ -319,6 +326,44 @@ export default function Home() {
     }
   };
 
+  const handleDocFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files || []).filter(f => f.name.endsWith('.pdf'));
+    setDocFiles(prev => { const ex = new Set(prev.map(f => f.name)); return [...prev, ...selected.filter(f => !ex.has(f.name))]; });
+    e.target.value = '';
+  };
+  const removeDocFile = (name: string) => setDocFiles(prev => prev.filter(f => f.name !== name));
+  const docTypeLabel = (filename: string) => {
+    const f = filename.toLowerCase();
+    if (f.includes('syllabus')) return { label: 'Syllabus', color: '#4f46e5' };
+    if (f.includes('_ms_') || f.includes('mark')) return { label: 'Mark Scheme', color: '#059669' };
+    if (f.includes('specimen')) return { label: 'Specimen', color: '#d97706' };
+    if (f.includes('_qp_') || f.includes('paper')) return { label: 'Past Paper', color: '#0891b2' };
+    return { label: 'Other', color: '#6b7280' };
+  };
+  const ingestDocs = async () => {
+    if (!docSecret) { setDocError('Enter admin secret'); return; }
+    if (!docFiles.length) { setDocError('Add at least one PDF'); return; }
+    setDocError(''); setDocLoading(true); setDocResults([]);
+    const allResults: typeof docResults = [];
+    for (let i = 0; i < docFiles.length; i += 5) {
+      const batch = docFiles.slice(i, i + 5);
+      const fd = new FormData();
+      batch.forEach(f => fd.append('files', f));
+      try {
+        const resp = await fetch('/api/ingest', { method: 'POST', headers: { 'x-admin-secret': docSecret }, body: fd });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Upload failed');
+        allResults.push(...(data.results || []));
+        setDocResults([...allResults]);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : 'Unknown error';
+        setDocError(`Batch ${Math.floor(i / 5) + 1} failed: ${msg}`);
+        break;
+      }
+    }
+    setDocLoading(false);
+  };
+
   const quickSend = (text: string) => { setInputValue(text); setTimeout(sendMessage, 0); };
 
   const startExam = async () => {
@@ -518,6 +563,7 @@ export default function Home() {
         <div className={`tab${activeTab === 'tutor' ? ' active' : ''}`} onClick={() => setActiveTab('tutor')}>🎓 AI Tutor</div>
         <div className={`tab${activeTab === 'exam' ? ' active' : ''}`} onClick={() => setActiveTab('exam')}>📝 Exam Mode</div>
         <div className={`tab${activeTab === 'history' ? ' active' : ''}`} onClick={() => setActiveTab('history')}>📊 History & Stats</div>
+        <div className={`tab${activeTab === 'docs' ? ' active' : ''}`} onClick={() => setActiveTab('docs')}>📚 Upload Docs</div>
       </div>
 
       <div className="layout">
@@ -1050,6 +1096,127 @@ export default function Home() {
                   ))}
                 </>
               )}
+            </div>
+          </div>
+
+          {/* ─── DOCS PANEL ─── */}
+          <div className={`panel${activeTab === 'docs' ? ' active' : ''}`}>
+            <div className="docs-panel">
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                  <span style={{ background: 'var(--accent)', color: 'white', fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4, letterSpacing: '.05em', fontFamily: "'DM Mono',monospace" }}>KNOWLEDGE BASE</span>
+                  <span style={{ fontSize: 15, fontWeight: 700 }}>Upload Cambridge Documents</span>
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>Upload Cambridge 9709 PDFs — syllabus, past papers, mark schemes, and specimen papers — to populate the vector database. Once ingested, the AI tutor will use these as grounded references for answers and grading.</p>
+              </div>
+
+              {/* Admin secret */}
+              <div>
+                <label style={{ display: 'block', fontSize: 10, color: 'var(--muted)', marginBottom: 5, fontWeight: 600, letterSpacing: '.07em', textTransform: 'uppercase' as const, fontFamily: "'DM Mono',monospace" }}>Admin Secret</label>
+                <input
+                  type="password"
+                  value={docSecret}
+                  onChange={e => setDocSecret(e.target.value)}
+                  placeholder="Enter ADMIN_SECRET…"
+                  style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 8, padding: '8px 12px', fontSize: 13, outline: 'none', background: 'var(--surface)', fontFamily: "'Syne',sans-serif", color: 'var(--ink)' }}
+                />
+              </div>
+
+              {/* Drop zone */}
+              <div
+                className="docs-zone"
+                onClick={() => docFileRef.current?.click()}
+                onDragOver={e => e.preventDefault()}
+                onDrop={e => {
+                  e.preventDefault();
+                  const dropped = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.pdf'));
+                  setDocFiles(prev => { const ex = new Set(prev.map(f => f.name)); return [...prev, ...dropped.filter(f => !ex.has(f.name))]; });
+                }}
+              >
+                <div className="docs-zone-icon">📄</div>
+                <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>Drop Cambridge PDFs here or click to browse</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)' }}>Syllabus · Past papers (QP) · Mark schemes (MS) · Specimen papers</div>
+                <input ref={docFileRef} type="file" accept=".pdf" multiple onChange={handleDocFiles} style={{ display: 'none' }} />
+              </div>
+
+              {/* File list */}
+              {docFiles.length > 0 && (
+                <div className="docs-file-list">
+                  <div style={{ padding: '9px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', fontFamily: "'DM Mono',monospace" }}>{docFiles.length} FILE{docFiles.length !== 1 ? 'S' : ''} QUEUED</span>
+                    <button onClick={() => setDocFiles([])} style={{ fontSize: 11, color: 'var(--red)', background: 'var(--red-bg)', border: 'none', borderRadius: 4, padding: '2px 8px', cursor: 'pointer' }}>Clear all</button>
+                  </div>
+                  {docFiles.map(f => {
+                    const dt = docTypeLabel(f.name);
+                    const result = docResults.find(r => r.file === f.name);
+                    return (
+                      <div key={f.name} className="docs-file-item">
+                        <span className="docs-badge" style={{ background: dt.color + '18', color: dt.color, border: `1px solid ${dt.color}40` }}>{dt.label}</span>
+                        <span style={{ flex: 1, fontSize: 12, fontFamily: "'DM Mono',monospace", color: 'var(--ink2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                        <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>{(f.size / 1024).toFixed(0)} KB</span>
+                        {result ? (
+                          <span style={{ fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0, color: result.status === 'success' ? 'var(--green)' : result.status === 'skip' ? 'var(--gold)' : 'var(--red)' }}>
+                            {result.status === 'success' ? `✓ ${result.vectors} vectors` : result.status === 'skip' ? '⚠ Skipped' : '✗ Error'}
+                          </span>
+                        ) : (
+                          !docLoading && <button onClick={() => removeDocFile(f.name)} style={{ fontSize: 14, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', flexShrink: 0 }}>✕</button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {docError && <div className="docs-result-err">{docError}</div>}
+
+              <button
+                className="docs-ingest-btn"
+                onClick={ingestDocs}
+                disabled={docLoading || !docFiles.length || !docSecret}
+              >
+                {docLoading
+                  ? '⏳ Ingesting — please wait…'
+                  : `🚀 Ingest ${docFiles.length || 0} PDF${docFiles.length !== 1 ? 's' : ''} into Pinecone`}
+              </button>
+
+              {docResults.length > 0 && !docLoading && (
+                <div className="docs-result-ok">
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                    ✅ {docResults.filter(r => r.status === 'success').length}/{docResults.length} files successfully ingested
+                  </div>
+                  <div style={{ fontSize: 12 }}>
+                    {docResults.reduce((a, r) => a + (r.vectors || 0), 0).toLocaleString()} vectors upserted into Pinecone · AI Tutor RAG is now active
+                  </div>
+                  {docResults.some(r => r.status === 'skip' || r.status === 'error') && (
+                    <div style={{ marginTop: 8, fontSize: 11, color: 'var(--gold)' }}>
+                      {docResults.filter(r => r.status === 'skip').length} skipped (scanned PDFs) · {docResults.filter(r => r.status === 'error').length} errors
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Naming tips */}
+              <div className="docs-tips">
+                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--muted)', letterSpacing: '.07em', marginBottom: 10, textTransform: 'uppercase' as const, fontFamily: "'DM Mono',monospace" }}>Naming convention for auto-detection</div>
+                {([
+                  ['9709_syllabus_2025-2027.pdf', 'Syllabus'],
+                  ['9709_s22_qp_11.pdf', 'Past Paper — May/June 2022, Paper 11'],
+                  ['9709_w23_ms_12.pdf', 'Mark Scheme — Oct/Nov 2023, Paper 12'],
+                  ['9709_specimen_qp_1.pdf', 'Specimen Paper'],
+                ] as [string, string][]).map(([name, desc]) => (
+                  <div key={name} style={{ display: 'flex', gap: 12, marginBottom: 6, alignItems: 'baseline' }}>
+                    <code style={{ fontSize: 11, color: 'var(--accent)', background: 'white', padding: '1px 5px', borderRadius: 3, whiteSpace: 'nowrap' as const, fontFamily: "'DM Mono',monospace" }}>{name}</code>
+                    <span style={{ fontSize: 12, color: 'var(--muted)' }}>{desc}</span>
+                  </div>
+                ))}
+                <div style={{ marginTop: 12, fontSize: 12, color: 'var(--muted)' }}>
+                  Free download from{' '}
+                  <a href="https://www.cambridgeinternational.org/programmes-and-qualifications/cambridge-international-as-and-a-level-mathematics-9709/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>
+                    cambridgeinternational.org
+                  </a>
+                </div>
+              </div>
+
             </div>
           </div>
 
