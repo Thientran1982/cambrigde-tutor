@@ -1,34 +1,26 @@
 // src/app/api/chat/route.ts
 // Streaming chat endpoint with RAG retrieval
-
 import { NextRequest } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { retrieveChunks, buildSystemPrompt } from '@/lib/rag';
-
 export const runtime = 'nodejs';
 export const maxDuration = 60;
-
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { messages, topic, useRAG = true } = body;
-
     if (!messages || !Array.isArray(messages)) {
       return Response.json({ error: 'messages array required' }, { status: 400 });
     }
-
     // Extract the latest user query for RAG retrieval
     const lastUserMsg = [...messages].reverse().find((m: { role: string }) => m.role === 'user');
     const queryText = typeof lastUserMsg?.content === 'string'
       ? lastUserMsg.content
       : lastUserMsg?.content?.find((c: { type: string }) => c.type === 'text')?.text || '';
-
     // RAG retrieval
     let systemPrompt: string;
     let sources: string[] = [];
-
     if (useRAG && queryText) {
       try {
         const ragResult = await retrieveChunks(queryText, {
@@ -47,10 +39,8 @@ export async function POST(req: NextRequest) {
     } else {
       systemPrompt = buildSystemPrompt('');
     }
-
     // Stream response from Claude
     const encoder = new TextEncoder();
-
     const stream = new ReadableStream({
       async start(controller) {
         // First, send sources so the frontend can show citations
@@ -59,7 +49,6 @@ export async function POST(req: NextRequest) {
             encoder.encode(`data: ${JSON.stringify({ type: 'sources', sources })}\n\n`)
           );
         }
-
         // Stream Claude response
         const claudeStream = anthropic.messages.stream({
           model: 'claude-sonnet-4-20250514',
@@ -67,7 +56,6 @@ export async function POST(req: NextRequest) {
           system: systemPrompt,
           messages: messages,
         });
-
         for await (const chunk of claudeStream) {
           if (
             chunk.type === 'content_block_delta' &&
@@ -80,12 +68,10 @@ export async function POST(req: NextRequest) {
             );
           }
         }
-
         controller.enqueue(encoder.encode('data: [DONE]\n\n'));
         controller.close();
       },
     });
-
     return new Response(stream, {
       headers: {
         'Content-Type': 'text/event-stream',

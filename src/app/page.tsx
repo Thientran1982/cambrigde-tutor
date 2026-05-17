@@ -1,9 +1,7 @@
 'use client';
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import ResponseFormatter from '@/components/ResponseFormatter';
 import SourceCitations from '@/components/SourceCitations';
-
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string | ContentBlock[];
@@ -37,7 +35,6 @@ interface HistoryRecord {
   results: ExamResult[]; questions: ExamQuestion[];
 }
 interface ExamSettings { numQ: number; difficulty: string; timeLimitMin: number; markingStyle: string; topics: string[]; }
-
 const PAPER_GROUPS = [
   {
     paper: 'Pure 1', code: 'P1', color: '#4f46e5',
@@ -57,7 +54,6 @@ const PAPER_GROUPS = [
   },
 ];
 const ALL_EXAM_TOPICS = PAPER_GROUPS.flatMap(g => g.topics);
-
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'tutor' | 'exam' | 'history' | 'docs'>('tutor');
   const [currentTopic, setCurrentTopic] = useState('All Topics');
@@ -71,7 +67,6 @@ export default function Home() {
   const [pendingImage, setPendingImage] = useState<{ data: string; type: string; src: string } | null>(null);
   const [pendingFile, setPendingFile] = useState<{ name: string; content: string; fileType: 'pdf' | 'text' } | null>(null);
   const [fileLoading, setFileLoading] = useState(false);
-
   const [examView, setExamView] = useState<'setup' | 'active' | 'results'>('setup');
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [numQuestions, setNumQuestions] = useState(5);
@@ -88,9 +83,7 @@ export default function Home() {
   const [isGrading, setIsGrading] = useState(false);
   const [examError, setExamError] = useState('');
   const [examRagSources, setExamRagSources] = useState<string[]>([]);
-
   const [examHistory, setExamHistory] = useState<HistoryRecord[]>([]);
-
   const [docSecret, setDocSecret] = useState('');
   const [docSecretOk, setDocSecretOk] = useState<boolean | null>(null);
   const [docSecretTesting, setDocSecretTesting] = useState(false);
@@ -98,7 +91,6 @@ export default function Home() {
   const [docLoading, setDocLoading] = useState(false);
   const [docResults, setDocResults] = useState<{ file: string; status: string; chunks?: number; vectors?: number; reason?: string }[]>([]);
   const [docError, setDocError] = useState('');
-
   const chatAreaRef = useRef<HTMLDivElement>(null);
   const examTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -108,7 +100,6 @@ export default function Home() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const streamingTextRef = useRef('');
   const streamingSourcesRef = useRef<string[]>([]);
-
   useEffect(() => {
     try {
       const h = JSON.parse(localStorage.getItem('cam_exam_history') || '[]');
@@ -125,7 +116,6 @@ export default function Home() {
   useEffect(() => {
     return () => { if (examTimerRef.current) clearInterval(examTimerRef.current); };
   }, []);
-
   function formatResponse(text: string): string {
     let html = text;
     html = html.replace(/## (.*?)(\n|$)/g, '<h3>$1</h3>');
@@ -174,7 +164,6 @@ export default function Home() {
     if (inUl) result += '</ul>';
     return result;
   }
-
   const sendMessage = useCallback(async () => {
     if (isStreaming) return;
     const text = inputValue.trim();
@@ -188,7 +177,6 @@ export default function Home() {
     setIsStreaming(true);
     setLastSources([]);
     setQCount(c => c + 1);
-
     // Prepend file content to message text when a file is attached
     let finalText = text;
     if (fileData) {
@@ -197,40 +185,32 @@ export default function Home() {
       const truncated = fileData.content.length > 10000 ? `\n\n[…${fileData.content.length - 10000} more characters truncated]` : '';
       finalText = `[Attached file: ${fileData.name}]\n\n\`\`\`${ext}\n${preview}${truncated}\n\`\`\`${text ? '\n\n' + text : '\n\nPlease analyze this file and help me understand the content in the context of Cambridge 9709 mathematics.'}`;
     }
-
     const userContent: string | ContentBlock[] = imgData
       ? [
           { type: 'image', source: { type: 'base64', media_type: imgData.type, data: imgData.data } },
           { type: 'text', text: (text || 'Analyze this Cambridge exam paper and solve each question with full working and Cambridge mark scheme.') + (currentTopic !== 'All Topics' ? ` [Focus: ${currentTopic}]` : '') },
         ]
       : (currentTopic !== 'All Topics' ? `[Focus: ${currentTopic}]\n\n` : '') + finalText;
-
     const userMsg: ChatMessage = { role: 'user', content: userContent, imgSrc: imgData?.src };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
-
     const apiMessages = newMessages.map(m => ({ role: m.role, content: m.content }));
-
     streamingTextRef.current = '';
     streamingSourcesRef.current = [];
 
     setMessages(prev => [...prev, { role: 'assistant', content: '', sources: [] }]);
-
     try {
       const resp = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: apiMessages, topic: currentTopic, useRAG: true }),
       });
-
       if (!resp.ok) {
         const err = await resp.json();
         throw new Error(err.error || `HTTP ${resp.status}`);
       }
-
       const reader = resp.body!.getReader();
       const decoder = new TextDecoder();
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -266,14 +246,12 @@ export default function Home() {
         return updated;
       });
     }
-
     setIsStreaming(false);
   }, [isStreaming, inputValue, pendingImage, currentTopic, messages]);
 
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
-
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     const reader = new FileReader();
@@ -284,12 +262,10 @@ export default function Home() {
     reader.readAsDataURL(file);
     e.target.value = '';
   };
-
   const handleAttachFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
-
     // Images → use vision path
     if (file.type.startsWith('image/')) {
       const reader = new FileReader();
@@ -300,7 +276,6 @@ export default function Home() {
       reader.readAsDataURL(file);
       return;
     }
-
     // Text files → read client-side
     const textExts = /\.(txt|md|csv|json|py|js|ts|html|css|xml|yaml|yml)$/i;
     if (file.type.startsWith('text/') || textExts.test(file.name)) {
@@ -308,7 +283,6 @@ export default function Home() {
       setPendingFile({ name: file.name, content, fileType: 'text' });
       return;
     }
-
     // PDFs and other → extract via server
     setFileLoading(true);
     try {
@@ -328,7 +302,6 @@ export default function Home() {
       setFileLoading(false);
     }
   };
-
   const testDocSecret = async () => {
     if (!docSecret.trim()) { setDocSecretOk(false); return; }
     setDocSecretTesting(true); setDocSecretOk(null);
@@ -340,7 +313,6 @@ export default function Home() {
     }
     setDocSecretTesting(false);
   };
-
   const handleDocFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || []).filter(f => f.name.endsWith('.pdf'));
     setDocFiles(prev => { const ex = new Set(prev.map(f => f.name)); return [...prev, ...selected.filter(f => !ex.has(f.name))]; });
@@ -380,9 +352,7 @@ export default function Home() {
     }
     setDocLoading(false);
   };
-
   const quickSend = (text: string) => { setInputValue(text); setTimeout(sendMessage, 0); };
-
   const startExam = async () => {
     if (!selectedTopics.length) { setExamError('Please select at least one topic.'); return; }
     setExamError('');
@@ -392,12 +362,9 @@ export default function Home() {
     setExamAnswers([]);
     setGradingData(null);
     setExamRagSources([]);
-
     const settings: ExamSettings = { numQ: numQuestions, difficulty, timeLimitMin: timeLimit, markingStyle, topics: selectedTopics };
     setExamSettings(settings);
-
     if (examTimerRef.current) clearInterval(examTimerRef.current);
-
     try {
       const resp = await fetch('/api/exam', {
         method: 'POST',
@@ -419,7 +386,6 @@ export default function Home() {
       setIsGenerating(false);
     }
   };
-
   const startTimer = (seconds: number) => {
     setExamTimeRemaining(seconds);
     setExamTotalTime(seconds);
@@ -435,31 +401,25 @@ export default function Home() {
       });
     }, 1000);
   };
-
   const formatTimerDisplay = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
-
   const timerClass = examTotalTime > 0
     ? examTimeRemaining <= 60 ? 'timer-display danger'
     : examTimeRemaining <= 300 ? 'timer-display warning'
     : 'timer-display'
     : 'timer-display';
-
   const timerProgress = examTotalTime > 0 ? (examTimeRemaining / examTotalTime) * 100 : 100;
-
   const submitExam = useCallback(async () => {
     if (examTimerRef.current) { clearInterval(examTimerRef.current); examTimerRef.current = null; }
     setIsGrading(true);
-
     const liveAnswers = answerRefs.current.map(r => r?.value || '');
     const answeredCount = liveAnswers.filter(a => a.trim().length > 0).length;
     const timeTaken = examSettings && examSettings.timeLimitMin > 0
       ? (() => { const used = examSettings.timeLimitMin * 60 - examTimeRemaining; const m = Math.floor(Math.max(used,0)/60); const s = Math.max(used,0)%60; return `${m}:${String(s).padStart(2,'0')}`; })()
       : '—';
-
     try {
       const resp = await fetch('/api/grade', {
         method: 'POST',
@@ -471,7 +431,6 @@ export default function Home() {
 
       setGradingData({ ...grading, _timeTaken: timeTaken, _answeredCount: answeredCount } as GradingData & { _timeTaken: string; _answeredCount: number });
       setExamView('results');
-
       const grade = grading.cambridgeGrade + (grading.percentage >= 90 && grading.cambridgeGrade === 'A' ? '*' : '');
       const record: HistoryRecord = {
         id: Date.now(),
@@ -502,19 +461,15 @@ export default function Home() {
     setGradingData(null);
     setExamError('');
   };
-
   const clearHistory = () => {
     setExamHistory([]);
     localStorage.removeItem('cam_exam_history');
   };
-
   const avgExamScore = examHistory.length > 0
     ? Math.round(examHistory.reduce((a, h) => a + h.percentage, 0) / examHistory.length)
     : null;
-
   const gradeColor = (g: string) => ({ 'A*': '#d97706', A: '#059669', B: '#0891b2', C: '#6b6b8a', U: '#dc2626' } as Record<string, string>)[g[0]] || 'var(--muted)';
   const barColor = (pct: number) => pct >= 70 ? 'var(--green)' : pct >= 50 ? 'var(--gold)' : 'var(--red)';
-
   const topicScores: Record<string, { earned: number; available: number }> = {};
   examHistory.forEach(h => {
     if (h.results && h.questions) {
@@ -536,9 +491,7 @@ export default function Home() {
         return order.indexOf(h.grade) < order.indexOf(best) ? h.grade : best;
       }, 'U')
     : '—';
-
   const gd = gradingData as (GradingData & { _timeTaken?: string; _answeredCount?: number }) | null;
-
   return (
     <div className="app">
       {/* Header */}
@@ -559,7 +512,6 @@ export default function Home() {
           </span>
         </div>
       </div>
-
       {/* RAG Banner */}
       <div className="rag-banner">
         <div className="rag-dot"></div>
@@ -575,15 +527,13 @@ export default function Home() {
           API keys configured server-side
         </span>
       </div>
-
       {/* Tabs */}
       <div className="tabs">
-        <div className={`tab${activeTab === 'tutor' ? ' active' : ''}`} onClick={() => setActiveTab('tutor')}>🎓 AI Tutor</div>
-        <div className={`tab${activeTab === 'exam' ? ' active' : ''}`} onClick={() => setActiveTab('exam')}>📝 Exam Mode</div>
-        <div className={`tab${activeTab === 'history' ? ' active' : ''}`} onClick={() => setActiveTab('history')}>📊 History & Stats</div>
-        <div className={`tab${activeTab === 'docs' ? ' active' : ''}`} onClick={() => setActiveTab('docs')}>📚 Upload Docs</div>
+        <div className={`tab${activeTab === 'tutor' ? ' active' : ''}`} onClick={() => setActiveTab('tutor')}> AI Tutor</div>
+        <div className={`tab${activeTab === 'exam' ? ' active' : ''}`} onClick={() => setActiveTab('exam')}> Exam Mode</div>
+        <div className={`tab${activeTab === 'history' ? ' active' : ''}`} onClick={() => setActiveTab('history')}> History & Stats</div>
+        <div className={`tab${activeTab === 'docs' ? ' active' : ''}`} onClick={() => setActiveTab('docs')}> Upload Docs</div>
       </div>
-
       <div className="layout">
         {/* Sidebar */}
         <div className="sidebar">
@@ -650,14 +600,12 @@ export default function Home() {
           </div>
           <div className="sidebar-section">
             <div className="sidebar-label">Exam Shortcuts</div>
-            <button className="quick-chip" onClick={() => setActiveTab('exam')}>🎯 Start New Exam</button>
-            <button className="quick-chip" onClick={() => { setActiveTab('tutor'); setInputValue('What are the top 5 examiner traps in Cambridge 9709?'); }}>⚠️ Examiner Traps</button>
+            <button className="quick-chip" onClick={() => setActiveTab('exam')}> Start New Exam</button>
+            <button className="quick-chip" onClick={() => { setActiveTab('tutor'); setInputValue('What are the top 5 examiner traps in Cambridge 9709?'); }}> Examiner Traps</button>
             <button className="quick-chip" onClick={() => { setActiveTab('tutor'); setInputValue('Give me a complete A* revision strategy for Cambridge 9709'); }}>★ A* Strategy</button>
           </div>
         </div>
-
         <div className="main">
-
           {/* ─── TUTOR PANEL ─── */}
           <div className={`panel${activeTab === 'tutor' ? ' active' : ''}`} style={{ flexDirection: 'column' }}>
             <div className="chat-area" ref={chatAreaRef}>
@@ -684,7 +632,6 @@ export default function Home() {
                   </div>
                 </>
               )}
-
               {messages.map((msg, idx) => (
                 <div key={idx} className={`msg${msg.role === 'user' ? ' user' : ''}`}>
                   <div className={`avatar ${msg.role === 'user' ? 'user' : 'ai'}`}>
@@ -805,11 +752,9 @@ export default function Home() {
               </div>
             </div>
           </div>
-
           {/* ─── EXAM PANEL ─── */}
           <div className={`panel${activeTab === 'exam' ? ' active' : ''}`}>
             <div className="exam-panel">
-
               {/* Setup */}
               {examView === 'setup' && (
                 <div className="exam-setup">
@@ -902,7 +847,6 @@ export default function Home() {
                   </button>
                 </div>
               )}
-
               {/* Active Exam */}
               {examView === 'active' && (
                 <div className="active-exam">
@@ -925,7 +869,6 @@ export default function Home() {
                   <div className="progress-bar-outer">
                     <div className="progress-bar-inner" style={{ width: timerProgress + '%' }}></div>
                   </div>
-
                   <div className="questions-area">
                     {isGenerating ? (
                       <div className="loading-questions">
@@ -992,7 +935,6 @@ export default function Home() {
                   </div>
                 </div>
               )}
-
               {/* Results */}
               {examView === 'results' && gd && (
                 <div className="results-panel">
@@ -1030,7 +972,6 @@ export default function Home() {
                         )}
                       </div>
                     ) : null}
-
                     {(gd.results || []).map((r, i) => {
                       const q = examQuestions[i] || {} as ExamQuestion;
                       const pct = r.marksAvailable > 0 ? r.marksAwarded / r.marksAvailable : 0;
@@ -1064,7 +1005,6 @@ export default function Home() {
               )}
             </div>
           </div>
-
           {/* ─── HISTORY PANEL ─── */}
           <div className={`panel${activeTab === 'history' ? ' active' : ''}`}>
             <div className="history-panel">
@@ -1118,7 +1058,6 @@ export default function Home() {
               )}
             </div>
           </div>
-
           {/* ─── DOCS PANEL ─── */}
           <div className={`panel${activeTab === 'docs' ? ' active' : ''}`}>
             <div className="docs-panel">
@@ -1129,7 +1068,6 @@ export default function Home() {
                 </div>
                 <p style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>Upload Cambridge 9709 PDFs — syllabus, past papers, mark schemes, and specimen papers — to populate the vector database. Once ingested, the AI tutor will use these as grounded references for answers and grading.</p>
               </div>
-
               {/* Admin secret */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
@@ -1170,7 +1108,6 @@ export default function Home() {
                   </div>
                 )}
               </div>
-
               {/* Drop zone */}
               <div
                 className="docs-zone"
@@ -1187,7 +1124,6 @@ export default function Home() {
                 <div style={{ fontSize: 12, color: 'var(--muted)' }}>Syllabus · Past papers (QP) · Mark schemes (MS) · Specimen papers</div>
                 <input ref={docFileRef} type="file" accept=".pdf" multiple onChange={handleDocFiles} style={{ display: 'none' }} />
               </div>
-
               {/* File list */}
               {docFiles.length > 0 && (
                 <div className="docs-file-list">
@@ -1215,17 +1151,15 @@ export default function Home() {
                   })}
                 </div>
               )}
-
               {docError && <div className="docs-result-err">{docError}</div>}
-
               <button
                 className="docs-ingest-btn"
                 onClick={ingestDocs}
                 disabled={docLoading || !docFiles.length || !docSecret}
               >
                 {docLoading
-                  ? '⏳ Ingesting — please wait…'
-                  : `🚀 Ingest ${docFiles.length || 0} PDF${docFiles.length !== 1 ? 's' : ''} into Pinecone`}
+                  ? ' Ingesting — please wait…'
+                  : ` Ingest ${docFiles.length || 0} PDF${docFiles.length !== 1 ? 's' : ''} into Pinecone`}
               </button>
 
               {docResults.length > 0 && !docLoading && (
@@ -1243,7 +1177,6 @@ export default function Home() {
                   )}
                 </div>
               )}
-
               {/* Naming tips */}
               <div className="docs-tips">
                 <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--muted)', letterSpacing: '.07em', marginBottom: 10, textTransform: 'uppercase' as const, fontFamily: "'DM Mono',monospace" }}>Naming convention for auto-detection</div>

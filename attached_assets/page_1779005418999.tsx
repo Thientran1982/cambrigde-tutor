@@ -3,7 +3,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import ResponseFormatter from '@/components/ResponseFormatter';
 import SourceCitations from '@/components/SourceCitations';
 import type { Message, ExamQuestion, ExamHistory, ExamSettings, GradingResponse } from '@/lib/types';
-
 // ─── CSS-in-JS styles ────────────────────────────────────────────────────────
 const S = {
   app:        { display:'flex', flexDirection:'column' as const, height:'100vh', overflow:'hidden' },
@@ -44,14 +43,12 @@ const S = {
   iconBtn:    { width:42, height:42, border:'1.5px solid #dddcf0', borderRadius:9, background:'white', color:'#6b6b8a', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
   sendBtn:    { width:42, height:42, background:'#4f46e5', border:'none', borderRadius:9, color:'white', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
 };
-
 // ─── TOPICS ──────────────────────────────────────────────────────────────────
 const ALL_TOPICS = [
   'Integration','Differentiation','Algebra and Functions','Trigonometry',
   'Coordinate Geometry','Sequences and Series','Probability and Statistics',
   'Normal Distribution','Kinematics','Forces and Newton Laws','Vectors','Complex Numbers',
 ];
-
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 export default function Home() {
   // Tutor state
@@ -62,7 +59,6 @@ export default function Home() {
   const [qCount, setQCount]             = useState(0);
   const [pendingImg, setPendingImg]      = useState<{data:string;type:string;preview:string}|null>(null);
   const [msgSources, setMsgSources]     = useState<Record<number,string[]>>({});
-
   // Tab
   const [tab, setTab] = useState<'tutor'|'exam'|'history'>('tutor');
 
@@ -81,28 +77,22 @@ export default function Home() {
   const [totalTime, setTotalTime]       = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval>|null>(null);
   const [examSources, setExamSources]   = useState<string[]>([]);
-
   // History
   const [history, setHistory]           = useState<ExamHistory[]>([]);
-
   const chatRef    = useRef<HTMLDivElement>(null);
   const fileRef    = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
   useEffect(() => {
     const saved = localStorage.getItem('cam_exam_history_v2');
     if (saved) setHistory(JSON.parse(saved));
   }, []);
-
   useEffect(() => {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
   }, [messages, isStreaming]);
-
   // ── Timer ─────────────────────────────────────────────────────────────────
   const stopTimer = useCallback(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
   }, []);
-
   const submitExam = useCallback(async (qs: ExamQuestion[], ans: string[], settings: ExamSettings) => {
     stopTimer();
     setGradingLoading(true);
@@ -137,7 +127,6 @@ export default function Home() {
     }
     setGradingLoading(false);
   }, [stopTimer]);
-
   const startTimer = useCallback((seconds: number, qs: ExamQuestion[], ans: string[], settings: ExamSettings) => {
     setTimeLeft(seconds); setTotalTime(seconds);
     timerRef.current = setInterval(() => {
@@ -147,13 +136,11 @@ export default function Home() {
       });
     }, 1000);
   }, [submitExam]);
-
   // ── Send chat message ──────────────────────────────────────────────────────
   const sendMessage = async () => {
     if (isStreaming || (!input.trim() && !pendingImg)) return;
     const text = input.trim();
     setInput(''); setIsStreaming(true); setQCount(c => c + 1);
-
     // Build user message
     let userContent: Message['content'];
     if (pendingImg) {
@@ -164,15 +151,12 @@ export default function Home() {
     } else {
       userContent = (currentTopic !== 'All Topics' ? `[Focus: ${currentTopic}]\n\n` : '') + text;
     }
-
     const newMessages: Message[] = [...messages, { role: 'user', content: userContent }];
     setMessages(newMessages);
     setPendingImg(null);
-
     // Placeholder for streaming
     const aiIdx = newMessages.length;
     setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
-
     try {
       const resp = await fetch('/api/chat', {
         method: 'POST',
@@ -183,11 +167,9 @@ export default function Home() {
           useRAG: true,
         }),
       });
-
       const reader = resp.body!.getReader();
       const decoder = new TextDecoder();
       let accumulated = '';
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -213,12 +195,10 @@ export default function Home() {
     }
     setIsStreaming(false);
   };
-
   // ── Exam generation ────────────────────────────────────────────────────────
   const startExam = async () => {
     if (!examTopics.length) { alert('Select at least one topic'); return; }
     setExamLoading(true); setExamPhase('active'); setExamQuestions([]); setGrading(null);
-
     try {
       const resp = await fetch('/api/exam', {
         method: 'POST',
@@ -240,12 +220,10 @@ export default function Home() {
     }
     setExamLoading(false);
   };
-
   const handleSubmitExam = () => {
     const settings: ExamSettings = { numQ, difficulty, timeLimitMin: timeLimit, markingStyle:'auto', topics: examTopics };
     submitExam(examQuestions, examAnswers, settings);
   };
-
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     const reader = new FileReader();
@@ -255,12 +233,9 @@ export default function Home() {
     };
     reader.readAsDataURL(file); e.target.value = '';
   };
-
   const formatTimer = (s: number) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
   const timerColor  = timeLeft <= 60 ? '#f87171' : timeLeft <= 300 ? '#fbbf24' : 'white';
-
   const gradeColor = (g: string) => ({'A*':'#d97706','A':'#059669','B':'#0891b2','C':'#6b6b8a','U':'#dc2626'})[g[0]] || '#6b6b8a';
-
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div style={S.app}>
@@ -281,7 +256,6 @@ export default function Home() {
           <span style={S.levelText}>{qCount >= 3 ? 'Active session' : qCount >= 1 ? 'Assessing' : 'Ready'}</span>
         </div>
       </div>
-
       {/* TABS */}
       <div style={S.tabs}>
         {(['tutor','exam','history'] as const).map(t => (
@@ -290,9 +264,7 @@ export default function Home() {
           </div>
         ))}
       </div>
-
       <div style={S.layout}>
-
         {/* SIDEBAR */}
         <div style={S.sidebar}>
           <div style={S.sideSection}>
@@ -332,15 +304,13 @@ export default function Home() {
           </div>
           <div style={S.sideSection}>
             <div style={S.sideLabel}>Shortcuts</div>
-            <button style={S.quickBtn} onClick={() => setTab('exam')}>🎯 Start New Exam</button>
-            <button style={S.quickBtn} onClick={() => { setInput('What are the top 5 examiner traps in Cambridge 9709?'); setTab('tutor'); }}>⚠️ Examiner Traps</button>
+            <button style={S.quickBtn} onClick={() => setTab('exam')}> Start New Exam</button>
+            <button style={S.quickBtn} onClick={() => { setInput('What are the top 5 examiner traps in Cambridge 9709?'); setTab('tutor'); }}> Examiner Traps</button>
             <button style={S.quickBtn} onClick={() => { setInput('Give me a complete A* revision strategy for Cambridge 9709'); setTab('tutor'); }}>★ A* Strategy</button>
           </div>
         </div>
-
         {/* MAIN */}
         <div style={S.main}>
-
           {/* ── TUTOR TAB ─────────────────────────────────────────────── */}
           {tab === 'tutor' && (
             <>
@@ -358,7 +328,6 @@ export default function Home() {
                     ))}
                   </div>
                 </div>
-
                 {/* Messages */}
                 {messages.map((m, i) => (
                   <div key={i}>
@@ -387,7 +356,6 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-
               {/* Input */}
               <div style={S.inputArea}>
                 {pendingImg && (
@@ -423,11 +391,9 @@ export default function Home() {
               </div>
             </>
           )}
-
           {/* ── EXAM TAB ──────────────────────────────────────────────── */}
           {tab === 'exam' && (
             <div style={{ flex:1, overflowY:'auto', padding:24, display:'flex', flexDirection:'column', gap:20 }}>
-
               {/* SETUP */}
               {examPhase === 'setup' && (
                 <div style={{ background:'white', border:'1px solid #dddcf0', borderRadius:14, padding:24 }}>
@@ -450,7 +416,6 @@ export default function Home() {
                       </div>
                     ))}
                   </div>
-
                   <label style={{ display:'block', fontSize:9, fontFamily:"'DM Mono',monospace", color:'#6b6b8a', letterSpacing:'.06em', textTransform:'uppercase', marginBottom:8 }}>Topics to Include</label>
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:5, marginBottom:20 }}>
                     {ALL_TOPICS.map(t => {
@@ -463,14 +428,12 @@ export default function Home() {
                       );
                     })}
                   </div>
-
                   <button style={{ width:'100%', background:'#4f46e5', color:'white', border:'none', borderRadius:10, padding:13, fontFamily:"'Syne',sans-serif", fontSize:14, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}
                     onClick={startExam}>
                     ▶ Generate &amp; Start Exam
                   </button>
                 </div>
               )}
-
               {/* ACTIVE EXAM */}
               {examPhase === 'active' && (
                 <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
@@ -488,7 +451,6 @@ export default function Home() {
                       <div style={{ height:'100%', background:'#4f46e5', width:`${(timeLeft/totalTime)*100}%`, transition:'width .5s' }}/>
                     </div>
                   )}
-
                   {examLoading ? (
                     <div style={{ background:'white', border:'1px solid #dddcf0', borderTop:'none', borderRadius:'0 0 12px 12px', padding:40, textAlign:'center', color:'#6b6b8a' }}>
                       <div style={{ width:32, height:32, border:'3px solid #dddcf0', borderTopColor:'#4f46e5', borderRadius:'50%', animation:'spin .8s linear infinite', margin:'0 auto 12px' }}/>
@@ -530,7 +492,6 @@ export default function Home() {
                       )}
                     </div>
                   )}
-
                   <div style={{ background:'white', borderTop:'1px solid #dddcf0', padding:'12px 20px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                     <span style={{ fontSize:12, fontFamily:"'DM Mono',monospace", color:'#6b6b8a' }}>
                       {examQuestions.length > 0 ? `${examQuestions.length} questions · ${examQuestions.reduce((a,q)=>a+q.marks,0)} marks total` : 'Loading...'}
@@ -538,12 +499,11 @@ export default function Home() {
                     <button
                       style={{ background: gradingLoading ? '#dddcf0' : '#059669', color: gradingLoading ? '#6b6b8a' : 'white', border:'none', borderRadius:9, padding:'10px 22px', fontFamily:"'Syne',sans-serif", fontSize:13, fontWeight:600, cursor: gradingLoading ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', gap:7 }}
                       onClick={handleSubmitExam} disabled={gradingLoading || examLoading}>
-                      {gradingLoading ? '⏳ Grading...' : '✓ Submit & Grade'}
+                      {gradingLoading ? ' Grading...' : '✓ Submit & Grade'}
                     </button>
                   </div>
                 </div>
               )}
-
               {/* RESULTS */}
               {examPhase === 'results' && grading && (
                 <div style={{ background:'white', border:'1px solid #dddcf0', borderRadius:14, overflow:'hidden' }}>
@@ -598,7 +558,6 @@ export default function Home() {
               )}
             </div>
           )}
-
           {/* ── HISTORY TAB ───────────────────────────────────────────── */}
           {tab === 'history' && (
             <div style={{ flex:1, overflowY:'auto', padding:'20px 24px' }}>
@@ -615,7 +574,6 @@ export default function Home() {
                     <button style={{ fontSize:11, color:'#dc2626', background:'#fee2e2', border:'1px solid #fca5a5', borderRadius:6, padding:'4px 10px', cursor:'pointer', fontFamily:"'DM Mono',monospace" }}
                       onClick={() => { if(confirm('Clear all history?')){ setHistory([]); localStorage.removeItem('cam_exam_history_v2'); } }}>Clear All</button>
                   </div>
-
                   {/* Summary stats */}
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:18 }}>
                     {[
@@ -629,7 +587,6 @@ export default function Home() {
                       </div>
                     ))}
                   </div>
-
                   {/* Topic performance */}
                   {(() => {
                     const topicScores: Record<string,{e:number;a:number}> = {};
@@ -656,7 +613,6 @@ export default function Home() {
                       </div>
                     );
                   })()}
-
                   {/* History cards */}
                   {history.map(h => (
                     <div key={h.id} style={{ background:'white', border:'1px solid #dddcf0', borderRadius:10, padding:'14px 16px', marginBottom:10 }}>
@@ -680,10 +636,8 @@ export default function Home() {
               )}
             </div>
           )}
-
         </div>
       </div>
-
       <style>{`
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
         @keyframes blink { 0%,100%{opacity:.25} 50%{opacity:1} }

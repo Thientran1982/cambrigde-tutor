@@ -1,9 +1,7 @@
 'use client';
-
 interface Props {
   content: string;
 }
-
 function formatResponse(text: string): string {
   let html = text;
   html = html.replace(/## (.*?)(\n|$)/g, '<h3>$1</h3>');
@@ -66,7 +64,6 @@ function formatResponse(text: string): string {
   if (inUl) result += '</ul>';
   return result;
 }
-
 export default function ResponseFormatter({ content }: Props) {
   return (
     <div dangerouslySetInnerHTML={{ __html: formatResponse(content) }} />

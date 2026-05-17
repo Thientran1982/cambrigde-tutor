@@ -1,7 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=DM+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap');
-
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 :root {
   --ink: #1a1a2e;
   --ink2: #2d2d4e;
@@ -19,9 +17,7 @@
   --white: #ffffff;
   --surface: #f8f8fd;
 }
-
 html, body { height: 100%; font-family: 'Syne', sans-serif; background: var(--surface); color: var(--ink); }
-
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }

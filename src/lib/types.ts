@@ -3,12 +3,10 @@ export interface ContentBlock {
   text?: string;
   source?: { type: string; media_type: string; data: string };
 }
-
 export interface Message {
   role: 'user' | 'assistant';
   content: string | ContentBlock[];
 }
-
 export interface ExamQuestion {
   id: number;
   topic: string;
@@ -22,7 +20,6 @@ export interface ExamQuestion {
   mark_scheme: string;
   cambridge_source?: string;
 }
-
 export interface ExamResult {
   questionId: number;
   marksAwarded: number;
@@ -36,7 +33,6 @@ export interface ExamResult {
   modelAnswer: string;
   examinerNote?: string;
 }
-
 export interface GradingResponse {
   results: ExamResult[];
   totalMarks: number;
@@ -49,7 +45,6 @@ export interface GradingResponse {
   sources?: string[];
   ragUsed?: boolean;
 }
-
 export interface ExamSettings {
   numQ: number;
   difficulty: string;
@@ -57,7 +52,6 @@ export interface ExamSettings {
   markingStyle: string;
   topics: string[];
 }
-
 export interface ExamHistory {
   id: number;
   date: string;

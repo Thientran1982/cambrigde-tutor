@@ -1,9 +1,7 @@
 'use client';
 // src/app/admin/page.tsx
 // Admin UI to upload Cambridge PDFs → ingest into Pinecone
-
 import { useState, useRef } from 'react';
-
 interface IngestResult {
   file: string;
   status: 'success' | 'error' | 'skip';
@@ -11,7 +9,6 @@ interface IngestResult {
   vectors?: number;
   reason?: string;
 }
-
 export default function AdminPage() {
   const [secret, setSecret]     = useState('');
   const [files, setFiles]       = useState<File[]>([]);
@@ -19,7 +16,6 @@ export default function AdminPage() {
   const [results, setResults]   = useState<IngestResult[]>([]);
   const [error, setError]       = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
-
   const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || []).filter(f => f.name.endsWith('.pdf'));
     setFiles(prev => {
@@ -27,9 +23,7 @@ export default function AdminPage() {
       return [...prev, ...selected.filter(f => !existing.has(f.name))];
     });
   };
-
   const removeFile = (name: string) => setFiles(prev => prev.filter(f => f.name !== name));
-
   const docTypeLabel = (filename: string) => {
     const f = filename.toLowerCase();
     if (f.includes('syllabus')) return { label: 'Syllabus', color: '#4f46e5' };
@@ -38,7 +32,6 @@ export default function AdminPage() {
     if (f.includes('_qp_') || f.includes('paper')) return { label: 'Past Paper', color: '#0891b2' };
     return { label: 'Other', color: '#6b7280' };
   };
-
   const ingest = async () => {
     if (!secret) { setError('Enter admin secret'); return; }
     if (!files.length) { setError('Add at least one PDF'); return; }
@@ -51,7 +44,6 @@ export default function AdminPage() {
       const batch = files.slice(i, i + BATCH);
       const fd = new FormData();
       batch.forEach(f => fd.append('files', f));
-
       try {
         const resp = await fetch('/api/ingest', {
           method: 'POST',
@@ -70,10 +62,8 @@ export default function AdminPage() {
     }
     setLoading(false);
   };
-
   const successCount = results.filter(r => r.status === 'success').length;
   const totalVectors = results.reduce((a, r) => a + (r.vectors || 0), 0);
-
   return (
     <div style={{ maxWidth: 700, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, sans-serif' }}>
       <div style={{ marginBottom: 32 }}>
@@ -85,7 +75,6 @@ export default function AdminPage() {
           Upload Cambridge PDFs to populate the vector database. Run this once per batch of new documents.
         </p>
       </div>
-
       {/* Secret */}
       <div style={{ marginBottom: 20 }}>
         <label style={{ display: 'block', fontSize: 11, color: '#6b7280', marginBottom: 6, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase' }}>Admin Secret</label>
@@ -95,7 +84,6 @@ export default function AdminPage() {
           style={{ width: '100%', border: '1.5px solid #dddcf0', borderRadius: 8, padding: '8px 12px', fontSize: 13, outline: 'none', background: '#f8f8fd' }}
         />
       </div>
-
       {/* File drop zone */}
       <div
         style={{ border: '2px dashed #dddcf0', borderRadius: 12, padding: '32px 24px', textAlign: 'center', cursor: 'pointer', marginBottom: 16, transition: 'border-color .15s', background: '#f8f8fd' }}
@@ -115,7 +103,6 @@ export default function AdminPage() {
         <div style={{ fontSize: 12, color: '#6b7280' }}>Syllabus · Past papers (QP) · Mark schemes (MS) · Specimen papers</div>
         <input ref={fileRef} type="file" accept=".pdf" multiple onChange={handleFiles} style={{ display: 'none' }} />
       </div>
-
       {/* File list */}
       {files.length > 0 && (
         <div style={{ background: 'white', border: '1px solid #dddcf0', borderRadius: 10, overflow: 'hidden', marginBottom: 20 }}>
@@ -143,33 +130,29 @@ export default function AdminPage() {
           })}
         </div>
       )}
-
       {error && (
         <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#dc2626', marginBottom: 16 }}>
           {error}
         </div>
       )}
-
       <button
         onClick={ingest}
         disabled={loading || !files.length || !secret}
         style={{ width: '100%', background: loading ? '#dddcf0' : '#4f46e5', color: loading ? '#9090b8' : 'white', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
       >
-        {loading ? '⏳ Ingesting...' : `🚀 Ingest ${files.length} PDF${files.length !== 1 ? 's' : ''} into Pinecone`}
+        {loading ? ' Ingesting...' : ` Ingest ${files.length} PDF${files.length !== 1 ? 's' : ''} into Pinecone`}
       </button>
-
       {/* Results summary */}
       {results.length > 0 && !loading && (
         <div style={{ marginTop: 24, background: '#d1fae5', border: '1px solid #6ee7b7', borderRadius: 10, padding: '16px 20px' }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: '#059669', marginBottom: 4 }}>
-            ✅ Ingestion complete — {successCount}/{results.length} files processed
+             Ingestion complete — {successCount}/{results.length} files processed
           </div>
           <div style={{ fontSize: 13, color: '#065f46' }}>
             {totalVectors.toLocaleString()} vectors upserted into Pinecone · Cambridge RAG is now active
           </div>
         </div>
       )}
-
       {/* Tips */}
       <div style={{ marginTop: 32, background: '#f0eff8', borderRadius: 10, padding: '16px 20px' }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: '#6b6b8a', letterSpacing: '.06em', marginBottom: 10, textTransform: 'uppercase' }}>Naming convention for auto-detection</div>

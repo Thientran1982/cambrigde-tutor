@@ -38,7 +38,7 @@ externalPort = 80
 deploymentTarget = "autoscale"
 publicDir = "."
 run = ["npm", "run", "start"]
-build = ["npm", "run", "build"]
+build = ["bash", "-c", "npm ci && npm run build"]
 
 [userenv]
 

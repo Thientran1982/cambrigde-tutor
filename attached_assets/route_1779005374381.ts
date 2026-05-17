@@ -1,15 +1,11 @@
 // src/app/api/grade/route.ts
 // Auto-grade student exam submissions using Cambridge mark scheme context from RAG
-
 import { NextRequest } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { retrieveChunks } from '@/lib/rag';
-
 export const runtime = 'nodejs';
 export const maxDuration = 90;
-
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 interface Question {
   id: number;
   topic: string;
@@ -21,7 +17,6 @@ interface Question {
   model_answer: string;
   mark_scheme: string;
 }
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -30,18 +25,14 @@ export async function POST(req: NextRequest) {
       answers: string[];
       examSettings: { topics: string[]; difficulty: string };
     };
-
     if (!questions?.length || !answers?.length) {
       return Response.json({ error: 'questions and answers required' }, { status: 400 });
     }
-
     // Retrieve real Cambridge mark scheme chunks for context
     const topicsQuery = examSettings?.topics?.join(', ') || questions.map(q => q.topic).join(', ');
     const ragQuery = `Cambridge 9709 mark scheme ${topicsQuery} marking criteria method marks accuracy marks`;
-
     let ragContext = '';
     let sources: string[] = [];
-
     try {
       const ragResult = await retrieveChunks(ragQuery, {
         topK: 5,
@@ -54,7 +45,6 @@ export async function POST(req: NextRequest) {
     } catch (e) {
       console.warn('RAG failed for grading, using model knowledge only:', e);
     }
-
     const systemPrompt = `You are a strict Cambridge 9709 examiner grading student answers.
 ${ragContext ? `\nUse these official Cambridge mark scheme examples as reference for marking standards:\n\n${ragContext}\n` : ''}
 Apply Cambridge mark scheme principles strictly:
@@ -63,11 +53,8 @@ Apply Cambridge mark scheme principles strictly:
 - B marks: independent marks for specific values/statements
 - "Follow through" (ft): award if student's method is correct but carries forward an earlier error
 - Never award A mark if M mark was not earned (unless stated "independent")
-
 Return ONLY valid JSON, no markdown.`;
-
     const userPrompt = `Grade these ${questions.length} Cambridge 9709 student answers strictly.
-
 ${questions.map((q, i) => `
 QUESTION ${i + 1} [${q.marks} marks] — ${q.topic} (${q.difficulty})
 Question: ${q.question}
@@ -76,7 +63,6 @@ Official Mark Scheme: ${q.mark_scheme}
 Model Answer: ${q.model_answer}
 Student Answer: ${answers[i]?.trim() || '[No answer provided]'}
 `).join('\n---\n')}
-
 Return this exact JSON:
 {
   "results": [
@@ -102,23 +88,19 @@ Return this exact JSON:
   "weakTopics": ["Integration", "Trigonometry"],
   "strongTopics": ["Differentiation"]
 }`;
-
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1000,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });
-
     const raw = response.content
       .map(b => (b.type === 'text' ? b.text : ''))
       .join('')
       .replace(/```json|```/g, '')
       .trim();
-
     const grading = JSON.parse(raw);
     return Response.json({ ...grading, sources, ragUsed: ragContext.length > 0 });
-
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('Grade API error:', message);

@@ -190,16 +190,16 @@ html,body{height:100%;font-family:'Syne',sans-serif;background:var(--surface);co
   <div class="level-badge"><div class="level-dot"></div><span class="level-text" id="levelDisplay">Ready</span></div>
 </div>
 <div class="api-banner">
-  <label>🔑 API Key:</label>
+  <label> API Key:</label>
   <input type="password" class="api-input" id="apiKeyInput" placeholder="sk-ant-api03-...">
   <button class="api-save-btn" onclick="saveApiKey()">Save</button>
   <span class="api-status" id="apiStatus" style="display:none"></span>
   <span style="color:#5050a0;font-size:10px;font-family:'DM Mono',monospace;margin-left:auto">Stored locally · <a href="https://console.anthropic.com" target="_blank" style="color:#818cf8">Get key</a></span>
 </div>
 <div class="tabs">
-  <div class="tab active" onclick="switchTab('tutor')" id="tab-tutor">🎓 AI Tutor</div>
-  <div class="tab" onclick="switchTab('exam')" id="tab-exam">📝 Exam Mode</div>
-  <div class="tab" onclick="switchTab('history')" id="tab-history">📊 History & Stats</div>
+  <div class="tab active" onclick="switchTab('tutor')" id="tab-tutor"> AI Tutor</div>
+  <div class="tab" onclick="switchTab('exam')" id="tab-exam"> Exam Mode</div>
+  <div class="tab" onclick="switchTab('history')" id="tab-history"> History & Stats</div>
 </div>
 <div class="layout">
 <div class="sidebar">
@@ -231,13 +231,12 @@ html,body{height:100%;font-family:'Syne',sans-serif;background:var(--surface);co
   </div>
   <div class="sidebar-section">
     <div class="sidebar-label">Exam Shortcuts</div>
-    <button class="quick-chip" onclick="switchTab('exam')">🎯 Start New Exam</button>
-    <button class="quick-chip" onclick="quickSend('What are the top 5 examiner traps in Cambridge 9709?')">⚠️ Examiner Traps</button>
-    <button class="quick-chip" onclick="quickSend('Give me a complete A* revision strategy for Cambridge 9709')">★ A* Strategy</button>
+    <button class="quick-chip" onclick="switchTab('exam')"> Start New Exam</button>
+    <button class="quick-chip" onclick="quickSend('What are the top 5 examiner traps in Cambridge 9709?')"> Examiner Traps</button>
+    <button class="quick-chip" onclick="quickSend('Give me a complete A* revision strategy for Cambridge 9709')"> A* Strategy</button>
   </div>
 </div>
 <div class="main">
-
 <!-- TUTOR PANEL -->
 <div class="panel active" id="panel-tutor" style="flex-direction:column">
   <div class="chat-area" id="chatArea">
@@ -279,7 +278,6 @@ html,body{height:100%;font-family:'Syne',sans-serif;background:var(--surface);co
     </div>
   </div>
 </div>
-
 <!-- EXAM PANEL -->
 <div class="panel" id="panel-exam">
   <div class="exam-panel" id="examPanelInner">
@@ -372,21 +370,17 @@ html,body{height:100%;font-family:'Syne',sans-serif;background:var(--surface);co
     </div>
   </div>
 </div>
-
 <!-- HISTORY PANEL -->
 <div class="panel" id="panel-history">
   <div class="history-panel" id="historyPanel">
     <div class="history-empty"><div class="history-empty-icon">📋</div><div style="font-size:14px;font-weight:500;margin-bottom:6px">No exam history yet</div><div style="font-size:12px">Complete an exam in Exam Mode to see your stats here.</div></div>
   </div>
 </div>
-
 </div>
 </div>
 </div>
-
 <script>
 const SYSTEM_PROMPT=`You are an elite Cambridge International AS & A Level Mathematics (9709) AI Tutor and Exam Coach. Help students achieve A/A* grades. Behave like a Cambridge examiner, top-tier private tutor, exam strategy coach, and adaptive learning engine. Always align with CAIE 9709 syllabus, Cambridge mark scheme logic, examiner expectations, method marks and accuracy marks, official mathematical notation. Style: concise, structured, exam-focused, adaptive, high-precision, supportive but rigorous.
-
 PRIMARY WORKFLOW:
 1. Analyze question (paper type, topic, difficulty, subtopic)
 2. Solve step-by-step with examiner logic
@@ -394,9 +388,7 @@ PRIMARY WORKFLOW:
 4. Detect student weak patterns if they shared an attempt
 5. Generate 3 targeted CAIE-style practice questions
 6. Provide revision strategy with A* tip
-
 FORMAT with these exact section headers:
-
 ## Question Analysis
 Paper: [paper]
 Topic: [topic]
@@ -405,47 +397,37 @@ Difficulty: [Easy/Medium/Hard]
 Estimated Marks: [N marks]
 Skills Tested: [list]
 Common Cambridge Trap: [specific trap]
-
 ## Step-by-Step Solution
 [Numbered steps. Show full working. Explain WHY each step. Use notation: x^2, sqrt(x), dy/dx, int(f(x))dx]
-
 ## Cambridge Mark Scheme Breakdown
 M marks: [what earns method marks]
 A marks: [what earns accuracy marks]
 Common reasons marks are lost:
 - [reason 1]
 - [reason 2]
-
 ## Targeted Practice Questions
 ### Practice Q1 [Easy] [3 marks]
 [Question]
 Hint: [small hint]
-
 ### Practice Q2 [Medium] [5 marks]
 [Question]
 Hint: [small hint]
-
 ### Practice Q3 [Hard] [7 marks]
 [Question]
 Hint: [small hint]
-
 ## Revision Strategy
 Priority: [topic]
 Action: [specific drill]
 A* Tip: [sharp Cambridge insight]
-
 RULES: Use CAIE terminology, never hallucinate formulas, emphasize method marks, teach exam efficiency.`;
-
 let messages=[],qCount=0,currentTopic='All Topics',isTyping=false,pendingImageData=null,pendingImageType=null;
 let examQuestions=[],examAnswers=[],examTimer=null,examTimeRemaining=0,examTotalTime=0,examSettings={};
 let examHistory=JSON.parse(localStorage.getItem('cam_exam_history')||'[]');
-
 window.addEventListener('DOMContentLoaded',()=>{
   const saved=localStorage.getItem('cam_api_key');
   if(saved){document.getElementById('apiKeyInput').value=saved;showApiStatus('Key loaded ✓','ok');}
   renderHistory();updateSidebarStats();
 });
-
 function saveApiKey(){
   const key=document.getElementById('apiKeyInput').value.trim();
   if(!key.startsWith('sk-')){showApiStatus('Invalid key','err');return;}
@@ -457,7 +439,6 @@ function showApiStatus(msg,type){
   setTimeout(()=>el.style.display='none',3000);
 }
 function getApiKey(){return localStorage.getItem('cam_api_key')||document.getElementById('apiKeyInput').value.trim();}
-
 function switchTab(tab){
   ['tutor','exam','history'].forEach(t=>{
     document.getElementById('panel-'+t).classList.toggle('active',t===tab);
@@ -471,7 +452,6 @@ function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrol
 function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
 function insertHint(text){const b=document.getElementById('inputBox');b.value=text;b.focus();autoResize(b);}
 function quickSend(text){document.getElementById('inputBox').value=text;sendMessage();}
-
 function handleFileUpload(e){
   const file=e.target.files[0];if(!file)return;
   const reader=new FileReader();
@@ -490,10 +470,8 @@ function addMessage(role,content,imgSrc){
   const bub=document.createElement('div');bub.className='bubble '+(role==='user'?'user':'ai');
   if(imgSrc)bub.innerHTML=`<img src="${imgSrc}" style="max-width:180px;border-radius:5px;margin-bottom:6px;display:block">`;
   if(role==='assistant')bub.innerHTML+=formatResponse(content);
-  else{const p=document.createElement('p');p.textContent=content;bub.appendChild(p);}
-  div.appendChild(av);div.appendChild(bub);area.appendChild(div);area.scrollTop=area.scrollHeight;
+  else{const p=document.createElement('p');p.textContent=content;bub.appendChild(p);}  div.appendChild(av);div.appendChild(bub);area.appendChild(div);area.scrollTop=area.scrollHeight;
 }
-
 function formatResponse(text){
   let html=text;
   html=html.replace(/## (.*?)(\n|$)/g,'<h3>$1</h3>');
@@ -526,14 +504,12 @@ function formatResponse(text){
   }
   if(inUl)result+='</ul>';return result;
 }
-
 function showTyping(){
   const area=document.getElementById('chatArea');
   const div=document.createElement('div');div.className='msg';div.id='typingMsg';
   const av=document.createElement('div');av.className='avatar ai';av.textContent='AI';
   const bub=document.createElement('div');bub.className='bubble ai';
-  bub.innerHTML='<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
-  div.appendChild(av);div.appendChild(bub);area.appendChild(div);area.scrollTop=area.scrollHeight;
+  bub.innerHTML='<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';  div.appendChild(av);div.appendChild(bub);area.appendChild(div);area.scrollTop=area.scrollHeight;
 }
 function removeTyping(){const el=document.getElementById('typingMsg');if(el)el.remove();}
 
@@ -549,7 +525,6 @@ async function callAPI(systemPrompt,userMessages,maxTokens=1500){
   const data=await resp.json();
   return data.content?.map(b=>b.text||'').join('')||'';
 }
-
 async function sendMessage(){
   if(isTyping)return;
   const apiKey=getApiKey();
@@ -557,10 +532,8 @@ async function sendMessage(){
   const box=document.getElementById('inputBox');const text=box.value.trim();
   if(!text&&!pendingImageData)return;
   const imgData=pendingImageData;const imgType=pendingImageType;
-  const imgSrc=imgData?`data:${imgType};base64,${imgData}`:null;
-  box.value='';autoResize(box);isTyping=true;document.getElementById('sendBtn').disabled=true;
-  qCount++;document.getElementById('qCount').textContent=qCount;
-  document.getElementById('levelDisplay').textContent=qCount>=3?'Active':'Assessing';
+  const imgSrc=imgData?`data:${imgType};base64,${imgData}`:null;  box.value='';autoResize(box);isTyping=true;document.getElementById('sendBtn').disabled=true;
+  qCount++;document.getElementById('qCount').textContent=qCount;  document.getElementById('levelDisplay').textContent=qCount>=3?'Active':'Assessing';
   addMessage('user',text||'Analyze this exam paper.',imgSrc);clearImage();
   let userContent=imgData
     ?[{type:'image',source:{type:'base64',media_type:imgType,data:imgData}},{type:'text',text:(text||'Analyze this Cambridge exam paper and solve each question with full working and Cambridge mark scheme.')+(currentTopic!=='All Topics'?` [Focus: ${currentTopic}]`:'')}]
@@ -572,7 +545,6 @@ async function sendMessage(){
   }catch(err){removeTyping();addMessage('assistant',`Error: ${err.message}`);}
   isTyping=false;document.getElementById('sendBtn').disabled=false;
 }
-
 // ===== EXAM MODE =====
 async function startExam(){
   const apiKey=getApiKey();
@@ -616,7 +588,6 @@ Return ONLY valid JSON (no markdown, no other text):
     document.getElementById('activeExam').style.display='none';
   }
 }
-
 function renderExamQuestions(){
   const area=document.getElementById('questionsArea');area.innerHTML='';
   examQuestions.forEach((q,i)=>{
@@ -640,7 +611,6 @@ function renderExamQuestions(){
     area.appendChild(card);
   });
 }
-
 function saveAnswer(i,val){examAnswers[i]=val;}
 
 function startTimer(seconds){
@@ -652,28 +622,24 @@ function startTimer(seconds){
     if(examTimeRemaining<=0){clearInterval(examTimer);submitExam();}
   },1000);
 }
-
 function updateTimerDisplay(){
   const m=Math.floor(examTimeRemaining/60);const s=examTimeRemaining%60;
   const text=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   const el=document.getElementById('timerDisplay');el.textContent=text;
   el.className='timer-display'+(examTimeRemaining<=60?' danger':examTimeRemaining<=300?' warning':'');
 }
-
 async function submitExam(){
   if(examTimer){clearInterval(examTimer);examTimer=null;}
   const btn=document.getElementById('submitExamBtn');
   btn.disabled=true;btn.innerHTML='Grading...';
   const answeredCount=examAnswers.filter(a=>a.trim().length>0).length;
   const gradingPrompt=`You are a Cambridge 9709 examiner. Grade these student answers strictly per Cambridge mark scheme logic.
-
 ${examQuestions.map((q,i)=>`QUESTION ${i+1} [${q.marks} marks] — ${q.topic}
 Question: ${q.question}
 ${q.math_expression?`Math: ${q.math_expression}`:''}
 Mark Scheme: ${q.mark_scheme}
 Model Answer: ${q.model_answer}
 Student Answer: ${examAnswers[i]||'[No answer]'}`).join('\n---\n')}
-
 Return ONLY valid JSON (no markdown):
 {"results":[{"questionId":1,"marksAwarded":4,"marksAvailable":6,"grade":"partial","feedback":"Cambridge-style feedback. What was correct, what was missing, which M/A marks were earned/lost.","modelAnswer":"Brief ideal answer"}],"totalMarks":15,"totalAvailable":30,"percentage":50,"cambridgeGrade":"B","overallFeedback":"2-3 sentence performance summary and key improvement areas"}`;
   try{
@@ -688,7 +654,6 @@ Return ONLY valid JSON (no markdown):
     btn.disabled=false;alert('Grading error: '+err.message);
   }
 }
-
 function showResults(grading,answeredCount){
   document.getElementById('activeExam').style.display='none';
   const rp=document.getElementById('resultsPanel');rp.style.display='block';
@@ -696,8 +661,7 @@ function showResults(grading,answeredCount){
   const gradeEl=document.getElementById('resultsGrade');
   gradeEl.textContent=grade+(grade==='A'&&grading.percentage>=90?'*':'');
   const gradeColors={'A*':'#d97706','A':'#059669','B':'#0891b2','C':'#6b6b8a','U':'#dc2626'};
-  gradeEl.style.color=gradeColors[grade]||'white';
-  document.getElementById('resultsLabel').textContent=grading.overallFeedback||'Cambridge Grade';
+  gradeEl.style.color=gradeColors[grade]||'white';  document.getElementById('resultsLabel').textContent=grading.overallFeedback||'Cambridge Grade';
   const timeTaken=examSettings.timeLimitMin>0?formatTimeTaken():'—';
   document.getElementById('resultsStats').innerHTML=`
     <div class="result-stat"><div class="result-stat-num">${grading.totalMarks}/${grading.totalAvailable}</div><div class="result-stat-label">Score</div></div>
@@ -723,13 +687,11 @@ function showResults(grading,answeredCount){
   const newBtn=document.createElement('button');newBtn.className='new-exam-btn';newBtn.textContent='← New Exam';newBtn.onclick=resetExam;body.appendChild(newBtn);
   const histBtn=document.createElement('button');histBtn.className='new-exam-btn';histBtn.style.cssText='background:var(--ink);margin-top:8px';histBtn.textContent='📊 View Full History';histBtn.onclick=()=>switchTab('history');body.appendChild(histBtn);
 }
-
 function formatTimeTaken(){
   const used=examSettings.timeLimitMin*60-examTimeRemaining;
   const m=Math.floor(Math.max(used,0)/60);const s=Math.max(used,0)%60;
   return `${m}:${String(s).padStart(2,'0')}`;
 }
-
 function resetExam(){
   document.getElementById('activeExam').style.display='none';
   document.getElementById('resultsPanel').style.display='none';
@@ -740,16 +702,12 @@ function resetExam(){
 
 function saveToHistory(grading){
   const grade=grading.cambridgeGrade+(grading.percentage>=90&&grading.cambridgeGrade==='A'?'*':'');
-  const record={id:Date.now(),date:new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}),
-    grade,percentage:Math.round(grading.percentage),totalMarks:grading.totalMarks,totalAvailable:grading.totalAvailable,
-    topics:examSettings.topics,difficulty:examSettings.difficulty,numQ:examSettings.numQ,
-    feedback:grading.overallFeedback,results:grading.results,questions:examQuestions};
+  const record={id:Date.now(),date:new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}),    grade,percentage:Math.round(grading.percentage),totalMarks:grading.totalMarks,totalAvailable:grading.totalAvailable,    topics:examSettings.topics,difficulty:examSettings.difficulty,numQ:examSettings.numQ,    feedback:grading.overallFeedback,results:grading.results,questions:examQuestions};
   examHistory.unshift(record);
   if(examHistory.length>50)examHistory=examHistory.slice(0,50);
   localStorage.setItem('cam_exam_history',JSON.stringify(examHistory));
   updateSidebarStats();
 }
-
 function updateSidebarStats(){
   document.getElementById('examCount').textContent=examHistory.length;
   if(examHistory.length>0){
@@ -757,7 +715,6 @@ function updateSidebarStats(){
     document.getElementById('avgScore').textContent=avg+'%';
   }
 }
-
 function renderHistory(){
   const panel=document.getElementById('historyPanel');
   if(!examHistory.length){
@@ -772,8 +729,7 @@ function renderHistory(){
     if(h.results&&h.questions){
       h.results.forEach((r,i)=>{
         const topic=h.questions[i]?.topic||'Unknown';
-        if(!topicScores[topic])topicScores[topic]={earned:0,available:0};
-        topicScores[topic].earned+=r.marksAwarded||0;topicScores[topic].available+=r.marksAvailable||1;
+        if(!topicScores[topic])topicScores[topic]={earned:0,available:0};        topicScores[topic].earned+=r.marksAwarded||0;topicScores[topic].available+=r.marksAvailable||1;
       });
     }
   });
@@ -805,7 +761,6 @@ function renderHistory(){
       ${h.feedback?`<div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5">${h.feedback}</div>`:''}
     </div>`).join('')}`;
 }
-
 function clearHistory(){
   if(!confirm('Clear all exam history?'))return;
   examHistory=[];localStorage.removeItem('cam_exam_history');updateSidebarStats();renderHistory();

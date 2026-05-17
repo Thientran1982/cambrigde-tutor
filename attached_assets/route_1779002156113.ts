@@ -1,15 +1,11 @@
 // src/app/api/exam/route.ts
 // Generate Cambridge-style exam questions using RAG context
-
 import { NextRequest } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { retrieveChunks } from '@/lib/rag';
-
 export const runtime = 'nodejs';
 export const maxDuration = 60;
-
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -18,14 +14,11 @@ export async function POST(req: NextRequest) {
     if (!topics || !Array.isArray(topics) || topics.length === 0) {
       return Response.json({ error: 'topics array required' }, { status: 400 });
     }
-
     // Retrieve relevant past paper questions + mark schemes for context
     const topicsQuery = topics.join(', ');
     const ragQuery = `Cambridge 9709 exam questions ${topicsQuery} ${difficulty} difficulty mark scheme`;
-
     let ragContext = '';
     let sources: string[] = [];
-
     try {
       const ragResult = await retrieveChunks(ragQuery, {
         topK: 8,
@@ -37,17 +30,13 @@ export async function POST(req: NextRequest) {
     } catch (e) {
       console.warn('RAG failed for exam generation:', e);
     }
-
     const systemPrompt = `You are a Cambridge 9709 examiner generating authentic exam questions.
 ${ragContext ? `\nUse the following official Cambridge past paper examples as style reference:\n\n${ragContext}\n\n` : ''}
 Generate questions that authentically match Cambridge style — same difficulty gradients, notation, command words, and mark allocation as real 9709 papers.
 Return ONLY valid JSON, no markdown fences, no other text.`;
-
     const userPrompt = `Generate exactly ${numQuestions} Cambridge 9709 exam questions.
-
 Topics: ${topics.join(', ')}
 Difficulty: ${difficulty === 'mixed' ? 'Progressive Easy → Medium → Hard' : difficulty === 'exam' ? 'Authentic Cambridge paper mix' : difficulty}
-
 Return this exact JSON structure:
 {
   "questions": [
@@ -66,22 +55,18 @@ Return this exact JSON structure:
     }
   ]
 }`;
-
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1000,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });
-
     const rawText = response.content
       .map(b => (b.type === 'text' ? b.text : ''))
       .join('')
       .replace(/```json|```/g, '')
       .trim();
-
     const parsed = JSON.parse(rawText);
-
     return Response.json({
       ...parsed,
       sources,
