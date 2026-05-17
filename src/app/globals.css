@@ -20,7 +20,15 @@ html,body{height:100%;font-family:'Syne',sans-serif;background:var(--surface);co
 .tab{padding:10px 18px;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;display:flex;align-items:center;gap:6px}
 .tab:hover{color:var(--ink)}.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
 .layout{display:flex;flex:1;overflow:hidden}
-.sidebar{width:220px;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.sidebar{width:230px;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.paper-group-header{display:flex;align-items:center;gap:6px;padding:6px 9px;margin:3px 0 1px;border-radius:6px;cursor:pointer;transition:background .12s;user-select:none;padding-left:6px}
+.paper-group-header:hover{background:var(--faint)}
+.paper-code{font-size:9px;font-family:'DM Mono',monospace;font-weight:600;padding:1px 5px;border-radius:3px;white-space:nowrap;flex-shrink:0}
+.paper-group-name{font-size:11px;font-weight:600;color:var(--ink2);flex:1}
+.paper-chevron{font-size:9px;color:var(--muted);transition:transform .15s}
+.topic-sub-chip{padding:4px 9px 4px 20px;font-size:11px;color:var(--ink2);cursor:pointer;border-radius:5px;transition:all .12s;margin-bottom:1px;border:1px solid transparent}
+.topic-sub-chip:hover{background:var(--faint);border-color:var(--border)}
+.topic-sub-chip.active{background:var(--accent);color:white;border-color:var(--accent)}
 .sidebar-section{padding:14px;border-bottom:1px solid var(--border)}
 .sidebar-label{font-size:9px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:9px}
 .topic-chip{display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;transition:all .15s;font-size:12px;color:var(--ink2);margin-bottom:3px;border:1px solid transparent}

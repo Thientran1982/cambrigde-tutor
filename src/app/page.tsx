@@ -30,12 +30,31 @@ interface HistoryRecord {
 }
 interface ExamSettings { numQ: number; difficulty: string; timeLimitMin: number; markingStyle: string; topics: string[]; }
 
-const SIDEBAR_TOPICS = ['All Topics', 'Pure 1', 'Pure 2/3', 'Statistics 1', 'Mechanics'];
-const EXAM_TOPICS = ['Pure 1', 'Pure 2/3', 'Statistics 1', 'Mechanics', 'Integration', 'Differentiation', 'Vectors', 'Probability', 'Kinematics'];
+const PAPER_GROUPS = [
+  {
+    paper: 'Pure 1', code: 'P1', color: '#4f46e5',
+    topics: ['Quadratics & Polynomials', 'Functions & Graphs', 'Coordinate Geometry', 'Circular Measure', 'Trigonometry (P1)', 'Sequences & Series', 'Differentiation (P1)', 'Integration (P1)'],
+  },
+  {
+    paper: 'Pure 2/3', code: 'P2/3', color: '#7c3aed',
+    topics: ['Algebra & Partial Fractions', 'Logarithms & Exponentials', 'Trigonometry (P3)', 'Differentiation (P3)', 'Integration (P3)', 'Numerical Methods', 'Vectors (P3)', 'Differential Equations', 'Complex Numbers'],
+  },
+  {
+    paper: 'Statistics 1', code: 'S1', color: '#0891b2',
+    topics: ['Data Representation', 'Permutations & Combinations', 'Probability', 'Discrete Random Variables', 'Normal Distribution'],
+  },
+  {
+    paper: 'Mechanics', code: 'M', color: '#059669',
+    topics: ['Forces & Equilibrium', 'Newton\'s Laws', 'Kinematics', 'Work, Energy & Power', 'Momentum & Impulse'],
+  },
+];
+const ALL_EXAM_TOPICS = PAPER_GROUPS.flatMap(g => g.topics);
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'tutor' | 'exam' | 'history'>('tutor');
   const [currentTopic, setCurrentTopic] = useState('All Topics');
+  const [expandedPapers, setExpandedPapers] = useState<Record<string, boolean>>({ 'Pure 1': true, 'Pure 2/3': false, 'Statistics 1': false, 'Mechanics': false });
+  const togglePaper = (paper: string) => setExpandedPapers(prev => ({ ...prev, [paper]: !prev[paper] }));
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -440,24 +459,46 @@ export default function Home() {
         <div className="sidebar">
           <div className="sidebar-section">
             <div className="sidebar-label">Paper Topics</div>
-            {SIDEBAR_TOPICS.map(topic => (
-              <div
-                key={topic}
-                className={`topic-chip${currentTopic === topic ? ' active' : ''}`}
-                onClick={() => setCurrentTopic(topic)}
-              >
-                <div className="topic-dot"></div>{topic}
+            <div
+              className={`topic-chip${currentTopic === 'All Topics' ? ' active' : ''}`}
+              onClick={() => setCurrentTopic('All Topics')}
+            >
+              <div className="topic-dot"></div>All Topics
+            </div>
+            {PAPER_GROUPS.map(group => (
+              <div key={group.paper}>
+                <div
+                  className="paper-group-header"
+                  onClick={() => togglePaper(group.paper)}
+                  style={{ borderLeft: `3px solid ${group.color}` }}
+                >
+                  <span className="paper-code" style={{ background: group.color + '18', color: group.color, border: `1px solid ${group.color}40` }}>{group.code}</span>
+                  <span className="paper-group-name">{group.paper}</span>
+                  <span className="paper-chevron">{expandedPapers[group.paper] ? '▾' : '▸'}</span>
+                </div>
+                {expandedPapers[group.paper] && group.topics.map(topic => (
+                  <div
+                    key={topic}
+                    className={`topic-sub-chip${currentTopic === topic ? ' active' : ''}`}
+                    onClick={() => setCurrentTopic(topic)}
+                  >
+                    {topic}
+                  </div>
+                ))}
               </div>
             ))}
           </div>
           <div className="sidebar-section">
             <div className="sidebar-label">Quick Practice</div>
             {[
-              ['Give me a hard integration by parts question from Cambridge 9709', 'Integration by Parts'],
-              ['Give me a Cambridge binomial theorem question with full mark scheme', 'Binomial Theorem'],
+              ['Give me a hard Cambridge 9709 integration by parts question with mark scheme', 'Integration by Parts'],
+              ['Give me a Cambridge binomial theorem expansion question', 'Binomial Theorem'],
               ['Give me a normal distribution question from Cambridge Statistics 1', 'Normal Distribution'],
-              ['Give me a kinematics problem with variable acceleration', 'Kinematics'],
-              ['Give me a Cambridge 9709 3D vectors question with dot product', '3D Vectors'],
+              ['Give me a kinematics question with variable acceleration', 'Kinematics'],
+              ['Give me a Cambridge 9709 complex numbers question', 'Complex Numbers'],
+              ['Give me a coordinate geometry question involving circles from Cambridge 9709', 'Coordinate Geometry'],
+              ['Give me a Cambridge differential equations question with boundary conditions', 'Differential Equations'],
+              ['Give me a Cambridge mechanics question on work and energy', 'Work & Energy'],
             ].map(([q, label]) => (
               <button key={label} className="quick-chip" onClick={() => { setActiveTab('tutor'); setInputValue(q); }}>
                 {label}
@@ -651,19 +692,44 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="setup-field" style={{ marginBottom: 18 }}>
-                    <label style={{ fontSize: 9, fontFamily: '\'DM Mono\',monospace', color: 'var(--muted)', letterSpacing: '.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Topics (select at least one)</label>
-                    <div className="topic-checkboxes">
-                      {EXAM_TOPICS.map(topic => (
-                        <label key={topic} className={`topic-cb${selectedTopics.includes(topic) ? ' checked' : ''}`}>
-                          <input
-                            type="checkbox"
-                            checked={selectedTopics.includes(topic)}
-                            onChange={e => setSelectedTopics(prev => e.target.checked ? [...prev, topic] : prev.filter(t => t !== topic))}
-                          />
-                          {topic}
-                        </label>
-                      ))}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <label style={{ fontSize: 9, fontFamily: '\'DM Mono\',monospace', color: 'var(--muted)', letterSpacing: '.06em', textTransform: 'uppercase' }}>Topics (select at least one)</label>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => setSelectedTopics(ALL_EXAM_TOPICS)} style={{ fontSize: 10, fontFamily: '\'DM Mono\',monospace', background: 'var(--faint)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 8px', cursor: 'pointer', color: 'var(--ink2)' }}>Select All</button>
+                        <button onClick={() => setSelectedTopics([])} style={{ fontSize: 10, fontFamily: '\'DM Mono\',monospace', background: 'var(--faint)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 8px', cursor: 'pointer', color: 'var(--muted)' }}>Clear</button>
+                      </div>
                     </div>
+                    {PAPER_GROUPS.map(group => {
+                      const allChecked = group.topics.every(t => selectedTopics.includes(t));
+                      const someChecked = group.topics.some(t => selectedTopics.includes(t));
+                      return (
+                        <div key={group.paper} style={{ marginBottom: 10 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5, paddingBottom: 4, borderBottom: `1px solid ${group.color}30` }}>
+                            <span style={{ fontSize: 10, fontFamily: '\'DM Mono\',monospace', fontWeight: 600, padding: '1px 6px', borderRadius: 3, background: group.color + '18', color: group.color, border: `1px solid ${group.color}40` }}>{group.code}</span>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink2)', flex: 1 }}>{group.paper}</span>
+                            <button
+                              onClick={() => {
+                                if (allChecked) setSelectedTopics(prev => prev.filter(t => !group.topics.includes(t)));
+                                else setSelectedTopics(prev => [...new Set([...prev, ...group.topics])]);
+                              }}
+                              style={{ fontSize: 10, fontFamily: '\'DM Mono\',monospace', background: allChecked ? group.color : someChecked ? group.color + '30' : 'var(--faint)', color: allChecked ? 'white' : group.color, border: `1px solid ${group.color}50`, borderRadius: 4, padding: '1px 7px', cursor: 'pointer' }}
+                            >{allChecked ? '✓ All' : 'Select'}</button>
+                          </div>
+                          <div className="topic-checkboxes" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+                            {group.topics.map(topic => (
+                              <label key={topic} className={`topic-cb${selectedTopics.includes(topic) ? ' checked' : ''}`} style={{ borderLeft: `2px solid ${selectedTopics.includes(topic) ? group.color : 'transparent'}` }}>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedTopics.includes(topic)}
+                                  onChange={e => setSelectedTopics(prev => e.target.checked ? [...prev, topic] : prev.filter(t => t !== topic))}
+                                />
+                                {topic}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                   <button className="start-exam-btn" onClick={startExam} disabled={selectedTopics.length === 0}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3" /></svg>
