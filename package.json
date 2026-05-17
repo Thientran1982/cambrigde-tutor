@@ -1,0 +1,32 @@
+{
+  "name": "cambridge-9709-rag-tutor",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 5000 -H 0.0.0.0",
+    "build": "next build",
+    "start": "next start -p 5000 -H 0.0.0.0",
+    "ingest": "node scripts/ingest.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.3",
+    "@pinecone-database/pinecone": "^2.2.2",
+    "ai": "^3.4.33",
+    "dotenv": "^16.6.1",
+    "next": "^14.2.5",
+    "openai": "^4.104.0",
+    "pdf-parse": "^1.1.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.41",
+    "@types/pdf-parse": "^1.1.5",
+    "@types/react": "^18.3.28",
+    "@types/react-dom": "^18.3.7",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.14",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.3"
+  }
+}
