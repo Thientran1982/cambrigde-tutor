@@ -69,7 +69,7 @@ Return this exact JSON structure:
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 8000,
+      max_tokens: Math.min(8192, 1200 + numQuestions * 600),
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });

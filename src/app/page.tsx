@@ -820,7 +820,7 @@ export default function Home() {
                     <div className="setup-field">
                       <label>Number of Questions</label>
                       <select className="setup-select" value={numQuestions} onChange={e => setNumQuestions(parseInt(e.target.value))}>
-                        {[3, 5, 7, 10].map(n => <option key={n} value={n}>{n} Questions</option>)}
+                        {[3, 5, 7, 10, 12].map(n => <option key={n} value={n}>{n} Questions{n === 12 ? ' (Full Paper)' : ''}</option>)}
                       </select>
                     </div>
                     <div className="setup-field">
